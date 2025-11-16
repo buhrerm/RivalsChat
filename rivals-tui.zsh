@@ -218,26 +218,26 @@ draw_header() {
 # Draw input section
 draw_input_section() {
     local width=70
-    local box_width=62
+    local content_width=60  # Actual usable content area (text inside the box)
     # Empty line
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
     # "Type your text:" is 15 chars, 2 spaces prefix = 17 chars, need 51 spaces after
     echo -e "${BORDER}${V}${RESET}  ${TEXT}Type your text:${RESET}$(printf ' %.0s' {1..51})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}┌──────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
 
     # Display input with cursor - truncate if too long
     local display_text="${INPUT_TEXT}_"
-    if [[ ${#display_text} -gt $box_width ]]; then
-        display_text="${display_text:0:$box_width}"
+    if [[ ${#display_text} -gt $content_width ]]; then
+        display_text="${display_text:0:$content_width}"
     fi
 
     # Calculate padding needed (no ANSI codes in input, so simple calculation)
-    local padding_needed=$((box_width - ${#display_text}))
+    local padding_needed=$((content_width - ${#display_text}))
     local padding=$(printf ' %.0s' {1..$padding_needed})
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}└──────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
     # Empty line
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
@@ -245,24 +245,24 @@ draw_input_section() {
 # Draw preview section
 draw_preview_section() {
     local width=70
-    local box_width=62
+    local content_width=60  # Actual usable content area (text inside the box)
     # "Preview:" is 8 chars, 2 spaces prefix = 10 chars, need 58 spaces after
     echo -e "${BORDER}${V}${RESET}  ${TEXT}Preview:${RESET}$(printf ' %.0s' {1..58})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}┌──────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
 
     if [[ -z "$INPUT_TEXT" ]]; then
         local empty_msg="${DIM}Type something to see the magic...${RESET}"
         local visible_len=$(visible_length "$empty_msg")
-        local padding_needed=$((box_width - visible_len))
+        local padding_needed=$((content_width - visible_len))
         local padding=$(printf ' %.0s' {1..$padding_needed})
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${empty_msg}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${empty_msg}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     else
         local rainbow=$(generate_rainbow "$INPUT_TEXT" $CURRENT_PATTERN)
         # Calculate visible length (without ANSI codes)
         local visible_len=$(visible_length "$rainbow")
 
         # Truncate if too long
-        if [[ $visible_len -gt $box_width ]]; then
+        if [[ $visible_len -gt $content_width ]]; then
             # Count visible characters and truncate
             local char_count=0
             local truncated=""
@@ -278,7 +278,7 @@ draw_preview_section() {
                         in_ansi=0
                     fi
                 else
-                    if [[ $char_count -lt $box_width ]]; then
+                    if [[ $char_count -lt $content_width ]]; then
                         truncated+="$char"
                         ((char_count++))
                     else
@@ -287,17 +287,17 @@ draw_preview_section() {
                 fi
             done
             rainbow="$truncated${RESET}"
-            visible_len=$box_width
+            visible_len=$content_width
         fi
 
         # Calculate padding needed
-        local padding_needed=$((box_width - visible_len))
+        local padding_needed=$((content_width - visible_len))
         local padding=$(printf ' %.0s' {1..$padding_needed})
 
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${rainbow}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${rainbow}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     fi
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}└──────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
     # Empty line
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
@@ -323,24 +323,44 @@ draw_pattern_selector() {
     local -a pattern
     eval "pattern=(\${${pattern_name}[@]})"
 
-    # Generate color samples
-    local color_sample=""
+    # Generate color samples - build a string we can measure
+    local color_sample_plain=""  # For length calculation
+    local color_sample_colored="" # For display
     for color_code in ${pattern[@]}; do
-        color_sample+="${COLORS[$color_code]}●${RESET}"
+        color_sample_plain+="●"
+        color_sample_colored+="${COLORS[$color_code]}●${RESET}"
     done
 
-    # Build pattern display
-    local pattern_display="${current_icon} ${ACCENT}${BOLD}${current_name}${RESET} ${color_sample}"
-    local pattern_info="${DIM}(${CURRENT_PATTERN}/${NUM_PATTERNS})${RESET}"
+    # Build pattern display components
+    # Format: "🌈 Rainbow ●●●●●●●●●●●●● (1/10)"
+    # Calculate visible lengths
+    local icon_len=${#current_icon}  # Emoji is typically 2 bytes but displays as 1-2 chars
+    local name_len=${#current_name}
+    local dots_len=${#color_sample_plain}
+    local info_text="(${CURRENT_PATTERN}/${NUM_PATTERNS})"
+    local info_len=${#info_text}
+
+    # Total visible length: icon + space + name + space + dots + space + info
+    # Account for emoji width (most emojis display as 2 chars wide)
+    local visible_total=$((2 + 1 + name_len + 1 + dots_len + 1 + info_len))
 
     # Calculate padding for centered display
-    local visible_len=$(visible_length "$pattern_display $pattern_info")
-    local padding_left=$(( (68 - visible_len) / 2 ))
-    local padding_right=$(( 68 - visible_len - padding_left ))
+    local padding_left=$(( (68 - visible_total) / 2 ))
+    local padding_right=$(( 68 - visible_total - padding_left ))
+
+    # Ensure padding is at least 0
+    if [[ $padding_left -lt 0 ]]; then
+        padding_left=0
+    fi
+    if [[ $padding_right -lt 0 ]]; then
+        padding_right=0
+    fi
+
     local left_pad=$(printf ' %.0s' {1..$padding_left})
     local right_pad=$(printf ' %.0s' {1..$padding_right})
 
-    echo -e "${BORDER}${V}${RESET}${left_pad}${pattern_display} ${pattern_info}${right_pad}${BORDER}${V}${RESET}"
+    # Build the full display line
+    echo -e "${BORDER}${V}${RESET}${left_pad}${current_icon} ${ACCENT}${BOLD}${current_name}${RESET} ${color_sample_colored} ${DIM}${info_text}${RESET}${right_pad}${BORDER}${V}${RESET}"
     # Empty line
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
@@ -516,8 +536,8 @@ main() {
                 exit 0  # Exit immediately, cleanup will run via trap
                 ;;
             *) # Regular character - add to input
-                # Limit input to 60 characters to fit in box
-                if [[ ${#INPUT_TEXT} -lt 60 ]]; then
+                # Limit input to 59 characters to fit in box (60 - 1 for cursor)
+                if [[ ${#INPUT_TEXT} -lt 59 ]]; then
                     INPUT_TEXT+="$char"
                     draw_ui
                 fi
