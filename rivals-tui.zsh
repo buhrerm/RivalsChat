@@ -235,7 +235,7 @@ draw_input_section() {
     local padding_needed=$((content_width - ${#display_text}))
     local padding=$(printf ' %.0s' {1..$padding_needed})
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}  ${DIM}└──────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
     # Empty line
@@ -255,7 +255,7 @@ draw_preview_section() {
         local visible_len=$(visible_length "$empty_msg")
         local padding_needed=$((content_width - visible_len))
         local padding=$(printf ' %.0s' {1..$padding_needed})
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${empty_msg}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${empty_msg}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     else
         local rainbow=$(generate_rainbow "$INPUT_TEXT" $CURRENT_PATTERN)
         # Calculate visible length (without ANSI codes)
@@ -294,7 +294,7 @@ draw_preview_section() {
         local padding_needed=$((content_width - visible_len))
         local padding=$(printf ' %.0s' {1..$padding_needed})
 
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${rainbow}${padding}${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${rainbow}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     fi
 
     echo -e "${BORDER}${V}${RESET}  ${DIM}└──────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
