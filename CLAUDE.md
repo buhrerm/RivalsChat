@@ -40,7 +40,7 @@ Manage all your patterns in one place:
 
 ### How to Create a Custom Pattern
 
-1. **Press 'P'** in the main screen to open Pattern Manager
+1. **Press Ctrl+P** in the main screen to open Pattern Manager
 2. **Press 'N'** to create a new pattern
 3. **Enter Pattern Details**:
    - Type a name for your pattern
@@ -68,7 +68,7 @@ Manage all your patterns in one place:
 - **Tab** - Next pattern
 - **Shift+Tab** - Previous pattern
 - **Enter** - Copy to clipboard
-- **P** - Open Pattern Manager
+- **Ctrl+P** - Open Pattern Manager
 - **Esc** - Quit
 
 **Pattern Creator**:

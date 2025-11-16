@@ -2,7 +2,7 @@
 
 # Marvel Rivals Rainbow Converter - Enhanced TUI with Custom Pattern Creator
 # Type text, Tab to switch patterns, Enter to copy, Esc to quit
-# Press 'P' to enter Pattern Creator mode
+# Press Ctrl+P to enter Pattern Manager mode
 
 # Marvel Rivals Color Codes (matching the game)
 typeset -A RIVALS=(
@@ -340,7 +340,7 @@ draw_main_mode() {
     local current_pattern="${PATTERN_ORDER[$CURRENT_PATTERN_INDEX]}"
     local current_icon="${ALL_ICONS[$current_pattern]}"
 
-    echo -e "${BORDER}${V}${RESET}  ${TEXT}Pattern:${RESET} ${DIM}(Tab/Shift+Tab to navigate, P for pattern manager)${RESET}$(printf ' %.0s' {1..14})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${TEXT}Pattern:${RESET} ${DIM}(Tab/Shift+Tab to navigate, Ctrl+P for manager)${RESET}$(printf ' %.0s' {1..17})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Show current pattern with navigation hints
@@ -376,7 +376,7 @@ draw_main_mode() {
     echo -e "${VL}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Tab${RESET}${DIM} Next  ${TEXT}Shift+Tab${RESET}${DIM} Prev  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..9})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Tab${RESET}${DIM} Next  ${TEXT}S-Tab${RESET}${DIM} Prev  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..4})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Success message if needed
@@ -683,11 +683,13 @@ handle_creator_input() {
                 $'\x1b') # Escape sequences for arrow keys or ESC
                     IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                     if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to main
-                        CURRENT_MODE="main"
+                        # Just ESC - cancel and return to pattern manager
+                        CURRENT_MODE="pattern_manager"
                         CREATOR_NAME=""
                         CREATOR_ICON=""
                         CREATOR_COLORS=()
+                        CREATOR_CURSOR=1
+                        CREATOR_COLOR_CURSOR=1
                         draw_ui
                     elif [[ "$char2" == "[" ]]; then
                         IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
@@ -721,11 +723,13 @@ handle_creator_input() {
                 $'\x1b') # Escape sequences for arrow keys or ESC
                     IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                     if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to main
-                        CURRENT_MODE="main"
+                        # Just ESC - cancel and return to pattern manager
+                        CURRENT_MODE="pattern_manager"
                         CREATOR_NAME=""
                         CREATOR_ICON=""
                         CREATOR_COLORS=()
+                        CREATOR_CURSOR=1
+                        CREATOR_COLOR_CURSOR=1
                         draw_ui
                     elif [[ "$char2" == "[" ]]; then
                         IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
@@ -977,11 +981,13 @@ handle_manager_input() {
 
 # Cleanup on exit
 cleanup() {
-    tput cnorm 2>/dev/null
-    tput rmcup 2>/dev/null
-    stty echo 2>/dev/null
-    echo -ne "\r\033[K"
-    echo -e "\n${ACCENT}${BOLD}Thanks for using Enhanced Rivals Rainbow Converter!${RESET}\n"
+    {
+        tput cnorm 2>/dev/null
+        tput rmcup 2>/dev/null
+        stty echo 2>/dev/null
+        echo -ne "\r\033[K"
+        echo -e "\n${ACCENT}${BOLD}Thanks for using Enhanced Rivals Rainbow Converter!${RESET}\n"
+    } 2>/dev/null
     exit 0
 }
 
@@ -994,10 +1000,11 @@ main() {
 
     # Setup terminal
     trap cleanup EXIT INT TERM
-    tput smcup
+    tput smcup 2>/dev/null
     clear
-    tput civis
-    stty -echo -icanon min 0
+    tput civis 2>/dev/null
+    # Ensure terminal is in correct mode without debug output
+    stty -echo -icanon min 0 2>/dev/null
 
     # Initial draw
     draw_ui
@@ -1005,10 +1012,13 @@ main() {
     # Input loop
     while true; do
         local char
+        # Suppress all output and ensure silent reading
         if ! IFS= read -r -s -k 1 char 2>/dev/null; then
             exit 0
         fi
 
+        # Ensure no debug output
+        {
         case "$CURRENT_MODE" in
             "main")
                 case "$char" in
@@ -1033,7 +1043,7 @@ main() {
                         CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
                         draw_ui
                         ;;
-                    'p'|'P') # Pattern manager
+                    $'\x10') # Ctrl+P - Pattern manager
                         CURRENT_MODE="pattern_manager"
                         MANAGER_CURSOR=$CURRENT_PATTERN_INDEX
                         draw_ui
@@ -1059,7 +1069,7 @@ main() {
                     $'\x03') # Ctrl+C - exit
                         exit 0
                         ;;
-                    *) # Regular character
+                    *) # Regular character - including 'p' and 'P'
                         if [[ ${#INPUT_TEXT} -lt 59 ]]; then
                             INPUT_TEXT+="$char"
                             draw_ui
@@ -1074,6 +1084,7 @@ main() {
                 handle_manager_input "$char"
                 ;;
         esac
+        } 2>/dev/null  # Suppress any potential debug output
     done
 }
 
