@@ -57,20 +57,28 @@ HD='╦'
 CROSS='╬'
 
 # Pattern definitions (using Marvel Rivals codes)
+# NOTE: Zsh arrays are 1-indexed by default
 RAINBOW_PATTERN=(Y O R P M U B I A T G E K)  # Full 13-color spectrum
 WARM_PATTERN=(Y O R P M)                     # Fire colors
 COOL_PATTERN=(U B I A T G)                   # Ice colors
+NEON_PATTERN=(E G T A B U)                   # Electric neon colors
+SUNSET_PATTERN=(Y E O R P M)                 # Warm gradient sunset
+OCEAN_PATTERN=(B I A T G)                    # Deep sea colors
+PSYCHEDELIC_PATTERN=(M U E O A R)            # Alternating vibrant
+SPRING_PATTERN=(G E Y O P)                   # Fresh spring colors
+CHERRY_PATTERN=(P M R O Y)                   # Cherry blossom gradient
+MATRIX_PATTERN=(G T A)                       # Matrix green vibes
 
-typeset -A PATTERNS
-PATTERNS=(
-    0 "Rainbow"
-    1 "Warm"
-    2 "Cool"
-)
+# Pattern metadata - MUST be in same order as patterns
+PATTERN_NAMES=("Rainbow" "Warm" "Cool" "Neon" "Sunset" "Ocean" "Psychedelic" "Spring" "Cherry" "Matrix")
+PATTERN_ICONS=("🌈" "🔥" "❄️" "⚡" "🌅" "🌊" "🎨" "🌸" "🍒" "💚")
+
+# Total number of patterns
+NUM_PATTERNS=${#PATTERN_NAMES[@]}
 
 # Initialize state
 INPUT_TEXT=""
-CURRENT_PATTERN=0
+CURRENT_PATTERN=1  # Using 1-based indexing for Zsh arrays
 CLIPBOARD_CMD=""
 
 # Detect clipboard command
@@ -86,26 +94,42 @@ detect_clipboard() {
     fi
 }
 
+# Get pattern array by index (1-based)
+# Returns the pattern name to be used with eval
+get_pattern_name() {
+    local idx=$1
+    case $idx in
+        1) echo "RAINBOW_PATTERN" ;;
+        2) echo "WARM_PATTERN" ;;
+        3) echo "COOL_PATTERN" ;;
+        4) echo "NEON_PATTERN" ;;
+        5) echo "SUNSET_PATTERN" ;;
+        6) echo "OCEAN_PATTERN" ;;
+        7) echo "PSYCHEDELIC_PATTERN" ;;
+        8) echo "SPRING_PATTERN" ;;
+        9) echo "CHERRY_PATTERN" ;;
+        10) echo "MATRIX_PATTERN" ;;
+    esac
+}
+
 # Convert text to Marvel Rivals code
 convert_to_rivals() {
     local text=$1
     local pattern_idx=$2
     local result=""
-    local color_idx=0
-    local pattern=()
+    local color_idx=1  # Zsh arrays are 1-indexed
 
-    # Select pattern
-    case $pattern_idx in
-        0) pattern=($RAINBOW_PATTERN) ;;
-        1) pattern=($WARM_PATTERN) ;;
-        2) pattern=($COOL_PATTERN) ;;
-    esac
+    # Get pattern array using indirect reference
+    local pattern_name=$(get_pattern_name $pattern_idx)
+    local -a pattern
+    eval "pattern=(\${${pattern_name}[@]})"
 
     # Convert each character
-    for ((i=0; i<${#text}; i++)); do
-        local char="${text:$i:1}"
+    for ((i=1; i<=${#text}; i++)); do
+        local char="${text:$((i-1)):1}"
         if [[ "$char" =~ [[:alnum:]] ]]; then
-            local color="${pattern[$((color_idx % ${#pattern[@]}))]}"
+            # Use 1-based array indexing
+            local color="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
             result+="#${color}${char}"
             ((color_idx++))
         else
@@ -121,15 +145,12 @@ generate_rainbow() {
     local text=$1
     local pattern_idx=$2
     local result=""
-    local color_idx=0
-    local pattern=()
+    local color_idx=1  # Zsh arrays are 1-indexed
 
-    # Select pattern
-    case $pattern_idx in
-        0) pattern=($RAINBOW_PATTERN) ;;
-        1) pattern=($WARM_PATTERN) ;;
-        2) pattern=($COOL_PATTERN) ;;
-    esac
+    # Get pattern array using indirect reference
+    local pattern_name=$(get_pattern_name $pattern_idx)
+    local -a pattern
+    eval "pattern=(\${${pattern_name}[@]})"
 
     if [[ ${#text} -eq 0 ]]; then
         echo ""
@@ -137,10 +158,11 @@ generate_rainbow() {
     fi
 
     # Apply colors to each character
-    for ((i=0; i<${#text}; i++)); do
-        local char="${text:$i:1}"
+    for ((i=1; i<=${#text}; i++)); do
+        local char="${text:$((i-1)):1}"
         if [[ "$char" =~ [[:alnum:]] ]]; then
-            local color_code="${pattern[$((color_idx % ${#pattern[@]}))]}"
+            # Use 1-based array indexing
+            local color_code="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
             result+="${COLORS[$color_code]}${char}${RESET}"
             ((color_idx++))
         else
@@ -151,6 +173,20 @@ generate_rainbow() {
     echo -n "$result"
 }
 
+# Strip ANSI color codes from text to measure actual length
+strip_ansi() {
+    local text=$1
+    # Remove ANSI escape sequences
+    echo -n "$text" | sed 's/\x1b\[[0-9;]*m//g'
+}
+
+# Get visible length of text (without ANSI codes)
+visible_length() {
+    local text=$1
+    local stripped=$(strip_ansi "$text")
+    echo ${#stripped}
+}
+
 # Draw header
 draw_header() {
     local width=70
@@ -158,16 +194,21 @@ draw_header() {
     printf "${H}%.0s" {1..$((width-2))}
     echo -e "${TR}${RESET}"
 
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}╔═══╗ ╔══╗ ╔╗  ╔╗ ╔═══╗ ╔╗    ╔═══╗  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╔═╗║ ╚╣╠╝ ║╚╗╔╝║ ║╔═╗║ ║║    ║╔═╗║  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╚═╝║  ║║  ╚╗║║╔╝ ║║ ║║ ║║    ║╚══╗  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╔╗╔╝  ║║   ║╚╝║  ║╚═╝║ ║║    ╚══╗║  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║║║╚╗ ╔╣╠╗  ╚╗╔╝  ║╔═╗║ ║╚═╗  ║╚═╝║  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}╚╝╚═╝ ╚══╝   ╚╝   ╚╝ ╚╝ ╚══╝  ╚═══╝  ${RESET}                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}          ${TEXT}Rainbow Text Converter for Marvel Rivals${RESET}            ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # Logo lines - each logo line is exactly 35 visible chars, need 31 spaces after (2 + 35 + 31 = 68)
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}╔═══╗ ╔══╗ ╔╗  ╔╗ ╔═══╗ ╔╗    ╔═══╗${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╔═╗║ ╚╣╠╝ ║╚╗╔╝║ ║╔═╗║ ║║    ║╔═╗║${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╚═╝║  ║║  ╚╗║║╔╝ ║║ ║║ ║║    ║╚══╗${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║╔╗╔╝  ║║   ║╚╝║  ║╚═╝║ ║║    ╚══╗║${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}║║║╚╗ ╔╣╠╗  ╚╗╔╝  ║╔═╗║ ║╚═╗  ║╚═╝║${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}╚╝╚═╝ ╚══╝   ╚╝   ╚╝ ╚╝ ╚══╝  ╚═══╝${RESET}$(printf ' %.0s' {1..31})${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # Subtitle - "Rainbow Text Converter for Marvel Rivals" is 40 chars, centered
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..14})${TEXT}Rainbow Text Converter for Marvel Rivals${RESET}$(printf ' %.0s' {1..14})${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     echo -ne "${BORDER}${VR}"
     printf "${H}%.0s" {1..$((width-2))}
@@ -177,66 +218,131 @@ draw_header() {
 # Draw input section
 draw_input_section() {
     local width=70
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${TEXT}Type your text:${RESET}                                                 ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
+    local box_width=62
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # "Type your text:" is 15 chars, 2 spaces prefix = 17 chars, need 51 spaces after
+    echo -e "${BORDER}${V}${RESET}  ${TEXT}Type your text:${RESET}$(printf ' %.0s' {1..51})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
 
-    # Display input with cursor
+    # Display input with cursor - truncate if too long
     local display_text="${INPUT_TEXT}_"
-    local padded=$(printf "%-62s" "$display_text")
-    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${padded:0:62}${RESET} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+    if [[ ${#display_text} -gt $box_width ]]; then
+        display_text="${display_text:0:$box_width}"
+    fi
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    # Calculate padding needed (no ANSI codes in input, so simple calculation)
+    local padding_needed=$((box_width - ${#display_text}))
+    local padding=$(printf ' %.0s' {1..$padding_needed})
+
+    echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+
+    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
 
 # Draw preview section
 draw_preview_section() {
     local width=70
-    echo -e "${BORDER}${V}${RESET}  ${TEXT}Preview:${RESET}                                                        ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
+    local box_width=62
+    # "Preview:" is 8 chars, 2 spaces prefix = 10 chars, need 58 spaces after
+    echo -e "${BORDER}${V}${RESET}  ${TEXT}Preview:${RESET}$(printf ' %.0s' {1..58})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}┌────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
 
     if [[ -z "$INPUT_TEXT" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${DIM}Type something to see the magic...${RESET}                          ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        local empty_msg="${DIM}Type something to see the magic...${RESET}"
+        local visible_len=$(visible_length "$empty_msg")
+        local padding_needed=$((box_width - visible_len))
+        local padding=$(printf ' %.0s' {1..$padding_needed})
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${empty_msg}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     else
         local rainbow=$(generate_rainbow "$INPUT_TEXT" $CURRENT_PATTERN)
-        local padded=$(printf "%-62s" "$rainbow")
-        # Note: padding won't work perfectly with colors, but it's close enough
-        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} $rainbow$(printf ' %.0s' {1..30}) ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
+        # Calculate visible length (without ANSI codes)
+        local visible_len=$(visible_length "$rainbow")
+
+        # Truncate if too long
+        if [[ $visible_len -gt $box_width ]]; then
+            # Count visible characters and truncate
+            local char_count=0
+            local truncated=""
+            local in_ansi=0
+            for ((i=1; i<=${#rainbow}; i++)); do
+                local char="${rainbow:$((i-1)):1}"
+                if [[ "$char" == $'\033' ]]; then
+                    in_ansi=1
+                fi
+                if [[ $in_ansi -eq 1 ]]; then
+                    truncated+="$char"
+                    if [[ "$char" == "m" ]]; then
+                        in_ansi=0
+                    fi
+                else
+                    if [[ $char_count -lt $box_width ]]; then
+                        truncated+="$char"
+                        ((char_count++))
+                    else
+                        break
+                    fi
+                fi
+            done
+            rainbow="$truncated${RESET}"
+            visible_len=$box_width
+        fi
+
+        # Calculate padding needed
+        local padding_needed=$((box_width - visible_len))
+        local padding=$(printf ' %.0s' {1..$padding_needed})
+
+        echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${rainbow}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
     fi
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}└────────────────────────────────────────────────────────────┘${RESET}  ${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
 
-# Draw pattern selector
+# Draw pattern selector with scrolling support
 draw_pattern_selector() {
     local width=70
-    echo -e "${BORDER}${V}${RESET}  ${TEXT}Pattern:${RESET}                                                        ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    # "Pattern: (Tab to cycle)" = 23 chars, with 2 spaces prefix = 25, need 43 spaces after
+    local pattern_label="${TEXT}Pattern:${RESET} ${DIM}(Tab to cycle)${RESET}"
+    local visible_len=23  # "Pattern: (Tab to cycle)" without ANSI codes
+    local padding_needed=$((68 - 2 - visible_len))  # 68 - 2 - 23 = 43
+    local padding=$(printf ' %.0s' {1..$padding_needed})
+    echo -e "${BORDER}${V}${RESET}  ${pattern_label}${padding}${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
-    # Pattern buttons
-    local p0_style p1_style p2_style
-    if [[ $CURRENT_PATTERN -eq 0 ]]; then
-        p0_style="${ACCENT}${BOLD}[● Rainbow]${RESET}"
-    else
-        p0_style="${DIM}[○ Rainbow]${RESET}"
-    fi
+    # Show current pattern with icon and sample colors
+    local current_name="${PATTERN_NAMES[$CURRENT_PATTERN]}"
+    local current_icon="${PATTERN_ICONS[$CURRENT_PATTERN]}"
 
-    if [[ $CURRENT_PATTERN -eq 1 ]]; then
-        p1_style="${FIRE_ORANGE}${BOLD}[● Warm]${RESET}"
-    else
-        p1_style="${DIM}[○ Warm]${RESET}"
-    fi
+    # Get pattern array using indirect reference
+    local pattern_name=$(get_pattern_name $CURRENT_PATTERN)
+    local -a pattern
+    eval "pattern=(\${${pattern_name}[@]})"
 
-    if [[ $CURRENT_PATTERN -eq 2 ]]; then
-        p2_style="${ICE_CYAN}${BOLD}[● Cool]${RESET}"
-    else
-        p2_style="${DIM}[○ Cool]${RESET}"
-    fi
+    # Generate color samples
+    local color_sample=""
+    for color_code in ${pattern[@]}; do
+        color_sample+="${COLORS[$color_code]}●${RESET}"
+    done
 
-    echo -e "${BORDER}${V}${RESET}       $p0_style      $p1_style      $p2_style             ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    # Build pattern display
+    local pattern_display="${current_icon} ${ACCENT}${BOLD}${current_name}${RESET} ${color_sample}"
+    local pattern_info="${DIM}(${CURRENT_PATTERN}/${NUM_PATTERNS})${RESET}"
+
+    # Calculate padding for centered display
+    local visible_len=$(visible_length "$pattern_display $pattern_info")
+    local padding_left=$(( (68 - visible_len) / 2 ))
+    local padding_right=$(( 68 - visible_len - padding_left ))
+    local left_pad=$(printf ' %.0s' {1..$padding_left})
+    local right_pad=$(printf ' %.0s' {1..$padding_right})
+
+    echo -e "${BORDER}${V}${RESET}${left_pad}${pattern_display} ${pattern_info}${right_pad}${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 }
 
 # Draw controls
@@ -246,27 +352,55 @@ draw_controls() {
     printf "${H}%.0s" {1..$((width-2))}
     echo -e "${VL}${RESET}"
 
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}Controls:${RESET}  ${TEXT}Tab${RESET}${DIM} Switch Pattern  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Esc${RESET}${DIM} Quit${RESET}          ${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}                                                                    ${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # Controls line: "Controls:  Tab Cycle Pattern  Enter Copy  Esc Quit"
+    # Visible: "Controls:" (9) + "  " (2) + "Tab" (3) + " Cycle Pattern  " (16) + "Enter" (5) + " Copy  " (7) + "Esc" (3) + " Quit" (5) = 50 chars
+    # With 2 spaces prefix = 52, need 16 spaces after
+    local controls_text="${DIM}Controls:${RESET}  ${TEXT}Tab${RESET}${DIM} Cycle Pattern  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Esc${RESET}${DIM} Quit${RESET}"
+    local visible_len=50  # Calculated visible length without ANSI codes
+    local padding_needed=$((68 - 2 - visible_len))
+    local padding=$(printf ' %.0s' {1..$padding_needed})
+    echo -e "${BORDER}${V}${RESET}  ${controls_text}${padding}${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     echo -ne "${BORDER}${BL}"
     printf "${H}%.0s" {1..$((width-2))}
     echo -e "${BR}${RESET}"
 }
 
-# Draw success message
+# Draw success message (within TUI boundaries)
 draw_success() {
-    local msg=$1
-    tput cup $((LINES/2)) $((COLS/2 - ${#msg}/2))
-    echo -ne "${SUCCESS}${BOLD}${msg}${RESET}"
-    sleep 1.5
+    local width=70
+    echo -ne "${BORDER}${VR}"
+    printf "${H}%.0s" {1..$((width-2))}
+    echo -e "${VL}${RESET}"
+
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # "✓ Copied to clipboard!" is 22 chars (✓ is 1 char), centered
+    local success_msg="${SUCCESS}${BOLD}✓ Copied to clipboard!${RESET}"
+    local visible_len=22
+    local padding_left=$(( (68 - visible_len) / 2 ))  # (68-22)/2 = 23
+    local padding_right=$(( 68 - visible_len - padding_left ))  # 68-22-23 = 23
+    local left_pad=$(printf ' %.0s' {1..$padding_left})
+    local right_pad=$(printf ' %.0s' {1..$padding_right})
+    echo -e "${BORDER}${V}${RESET}${left_pad}${success_msg}${right_pad}${BORDER}${V}${RESET}"
+    # Empty line
+    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+
+    echo -ne "${BORDER}${BL}"
+    printf "${H}%.0s" {1..$((width-2))}
+    echo -e "${BR}${RESET}"
 }
 
 # Draw complete UI
 draw_ui() {
-    clear
+    # Always position cursor at top-left
     tput cup 0 0
+    # Clear from cursor to end of screen to remove old content
+    tput ed
     draw_header
     draw_input_section
     draw_preview_section
@@ -286,19 +420,25 @@ copy_to_clipboard() {
 
     # Copy the Rivals code format, not the preview
     local rivals_code=$(convert_to_rivals "$INPUT_TEXT" $CURRENT_PATTERN)
-    echo -n "$rivals_code" | eval "$CLIPBOARD_CMD" 2>/dev/null
+    echo -n "$rivals_code" | eval "$CLIPBOARD_CMD" >/dev/null 2>&1
     return $?
 }
 
-# Cleanup on exit
+# Cleanup on exit - restores terminal to normal state
 cleanup() {
-    tput rmcup
-    tput cnorm
-    stty echo
+    # Restore cursor, exit alternate screen, re-enable echo
+    tput cnorm 2>/dev/null
+    tput rmcup 2>/dev/null
+    stty echo 2>/dev/null
+    # Clear any partial line output
+    echo -ne "\r\033[K"
     echo -e "\n${ACCENT}${BOLD}Thanks for using Rivals Rainbow Converter!${RESET}\n"
+    # Ensure we exit the script completely
+    exit 0
 }
 
-# Handle signals
+# Handle signals - proper Ctrl+C handling
+# The trap ensures cleanup runs on EXIT, INT (Ctrl+C), and TERM signals
 trap cleanup EXIT INT TERM
 
 # Main loop
@@ -306,60 +446,77 @@ main() {
     # Setup
     detect_clipboard
 
-    # Enter alternate screen
+    # Enter alternate screen buffer (like vim/less do)
     tput smcup
+    # Clear the entire screen
+    clear
+    # Hide cursor for cleaner UI
     tput civis
-    stty -echo
+    # Disable echo so keypresses don't show
+    # Also set up stty to handle Ctrl+C properly
+    stty -echo -icanon min 0
 
     # Initial draw
     draw_ui
 
     # Input loop
     while true; do
-        # Read single character
+        # Read single character without debug output
         local char
-        read -k 1 char
+        # Redirect stderr to /dev/null to suppress any debug output
+        if ! IFS= read -r -s -k 1 char 2>/dev/null; then
+            exit 0
+        fi
 
         case "$char" in
             $'\x1b') # Escape sequences
-                read -t 0.1 -k 1 char2
+                # Read additional characters for escape sequences
+                IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                 if [[ -z "$char2" ]]; then
                     # Just ESC - quit
                     break
                 elif [[ "$char2" == "[" ]]; then
-                    read -t 0.1 -k 1 char3
+                    IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
                     case "$char3" in
-                        "Z") # Shift+Tab
-                            CURRENT_PATTERN=$(( (CURRENT_PATTERN - 1 + 3) % 3 ))
+                        "Z") # Shift+Tab - cycle backwards
+                            CURRENT_PATTERN=$(( ((CURRENT_PATTERN - 2 + NUM_PATTERNS) % NUM_PATTERNS) + 1 ))
                             draw_ui
                             ;;
                     esac
                 fi
                 ;;
-            $'\t') # Tab - switch pattern
-                CURRENT_PATTERN=$(( (CURRENT_PATTERN + 1) % 3 ))
+            $'\t') # Tab - cycle forward through patterns
+                CURRENT_PATTERN=$(( (CURRENT_PATTERN % NUM_PATTERNS) + 1 ))
                 draw_ui
                 ;;
-            $'\n'|$'\r') # Enter - copy
+            $'\n'|$'\r') # Enter - copy to clipboard
                 if copy_to_clipboard; then
-                    draw_ui
-                    tput cup $((LINES/2)) $((COLS/2 - 15))
-                    echo -ne "${SUCCESS}${BOLD}✓ Copied to clipboard!${RESET}"
+                    tput cup 0 0
+                    tput ed
+                    draw_header
+                    draw_input_section
+                    draw_preview_section
+                    draw_pattern_selector
+                    draw_success
                     sleep 1
                     draw_ui
                 fi
                 ;;
-            $'\x7f'|$'\b') # Backspace
+            $'\x7f'|$'\b') # Backspace - delete last character
                 if [[ ${#INPUT_TEXT} -gt 0 ]]; then
                     INPUT_TEXT="${INPUT_TEXT:0:-1}"
                     draw_ui
                 fi
                 ;;
-            $'\x15') # Ctrl+U - clear line
+            $'\x15') # Ctrl+U - clear entire line
                 INPUT_TEXT=""
                 draw_ui
                 ;;
-            *) # Regular character
+            $'\x03') # Ctrl+C - exit gracefully
+                exit 0  # Exit immediately, cleanup will run via trap
+                ;;
+            *) # Regular character - add to input
+                # Limit input to 60 characters to fit in box
                 if [[ ${#INPUT_TEXT} -lt 60 ]]; then
                     INPUT_TEXT+="$char"
                     draw_ui
@@ -369,5 +526,8 @@ main() {
     done
 }
 
-# Run
+# Run the application
 main
+
+# Ensure clean exit without any debug output
+exit 0
