@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 # Marvel Rivals Rainbow Converter - Enhanced TUI with Custom Pattern Creator
-# Type text, Tab to switch patterns, Enter to copy, Esc to quit
+# Type text, use arrow keys or Tab to switch patterns, Enter to copy, Esc to quit
 # Press Ctrl+P to enter Pattern Manager mode
 
 # Marvel Rivals Color Codes (matching the game)
@@ -340,7 +340,7 @@ draw_main_mode() {
     local current_pattern="${PATTERN_ORDER[$CURRENT_PATTERN_INDEX]}"
     local current_icon="${ALL_ICONS[$current_pattern]}"
 
-    echo -e "${BORDER}${V}${RESET}  ${TEXT}Pattern:${RESET} ${DIM}(Tab/Shift+Tab to navigate, Ctrl+P for manager)${RESET}$(printf ' %.0s' {1..17})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${TEXT}Pattern:${RESET} ${DIM}(← → or Tab to navigate, Ctrl+P for manager)${RESET}$(printf ' %.0s' {1..15})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Show current pattern with navigation hints
@@ -1031,6 +1031,16 @@ main() {
                             IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
                             case "$char3" in
                                 "Z") # Shift+Tab - cycle backwards
+                                    local total=${#PATTERN_ORDER[@]}
+                                    CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
+                                    draw_ui
+                                    ;;
+                                "C") # Right arrow key - cycle forward through patterns
+                                    local total=${#PATTERN_ORDER[@]}
+                                    CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
+                                    draw_ui
+                                    ;;
+                                "D") # Left arrow key - cycle backwards through patterns
                                     local total=${#PATTERN_ORDER[@]}
                                     CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
                                     draw_ui
