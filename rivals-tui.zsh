@@ -376,7 +376,7 @@ draw_main_mode() {
     echo -e "${VL}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Tab${RESET}${DIM} Next  ${TEXT}S-Tab${RESET}${DIM} Prev  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..4})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Navigate  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..8})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Success message if needed
