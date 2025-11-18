@@ -89,6 +89,11 @@ CURRENT_MODE="main"  # main, pattern_creator, pattern_manager
 SHOW_SUCCESS=0
 SUCCESS_MSG=""
 
+# Text editor state
+CURSOR_POS=0  # Current cursor position (0 = before first char)
+SELECTION_START=-1  # Selection start position (-1 = no selection)
+SELECTION_END=-1  # Selection end position
+
 # Pattern creator state
 typeset -a CREATOR_COLORS
 CREATOR_NAME=""
@@ -198,6 +203,35 @@ detect_clipboard() {
     fi
 }
 
+# Paste from clipboard
+paste_from_clipboard() {
+    if [[ -z "$CLIPBOARD_CMD" ]]; then
+        return 1
+    fi
+
+    local pasted=""
+    if command -v xclip &> /dev/null; then
+        pasted=$(xclip -selection clipboard -o 2>/dev/null)
+    elif command -v pbpaste &> /dev/null; then
+        pasted=$(pbpaste 2>/dev/null)
+    elif command -v xsel &> /dev/null; then
+        pasted=$(xsel --clipboard --output 2>/dev/null)
+    fi
+
+    echo -n "$pasted"
+}
+
+# Copy raw text to clipboard (not Rivals format)
+copy_raw_to_clipboard() {
+    local text=$1
+    if [[ -z "$CLIPBOARD_CMD" || -z "$text" ]]; then
+        return 1
+    fi
+
+    echo -n "$text" | eval "$CLIPBOARD_CMD" >/dev/null 2>&1
+    return $?
+}
+
 # Convert text to Marvel Rivals code
 convert_to_rivals() {
     local text=$1
@@ -294,12 +328,59 @@ draw_main_mode() {
     echo -e "${BORDER}${V}${RESET}  ${TEXT}Type your text:${RESET}$(printf ' %.0s' {1..51})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}  ${DIM}┌──────────────────────────────────────────────────────────────┐${RESET}  ${BORDER}${V}${RESET}"
 
-    local display_text="${INPUT_TEXT}_"
-    if [[ ${#display_text} -gt 60 ]]; then
-        display_text="${display_text:0:60}"
+    # Build display text with selection and cursor
+    local display_text=""
+    local text_len=${#INPUT_TEXT}
+
+    # Ensure cursor position is valid
+    if [[ $CURSOR_POS -gt $text_len ]]; then
+        CURSOR_POS=$text_len
     fi
 
-    local padding_needed=$((60 - ${#display_text}))
+    # Handle selection display
+    if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+        local sel_start=$SELECTION_START
+        local sel_end=$SELECTION_END
+
+        # Ensure correct order
+        if [[ $sel_start -gt $sel_end ]]; then
+            local tmp=$sel_start
+            sel_start=$sel_end
+            sel_end=$tmp
+        fi
+
+        # Build text with selection highlighting
+        for ((i=0; i<$text_len; i++)); do
+            local char="${INPUT_TEXT:$i:1}"
+            if [[ $i -ge $sel_start && $i -lt $sel_end ]]; then
+                display_text+="${SELECTED}${char}${RESET}${HIGHLIGHT}"
+            else
+                display_text+="$char"
+            fi
+        done
+
+        # Add cursor at selection end
+        display_text+="${RESET}_"
+    else
+        # No selection, just show text with cursor
+        if [[ $CURSOR_POS -eq 0 ]]; then
+            display_text="_${INPUT_TEXT}"
+        elif [[ $CURSOR_POS -eq $text_len ]]; then
+            display_text="${INPUT_TEXT}_"
+        else
+            display_text="${INPUT_TEXT:0:$CURSOR_POS}_${INPUT_TEXT:$CURSOR_POS}"
+        fi
+    fi
+
+    # Truncate if too long
+    local visible_len=$(visible_length "$display_text")
+    if [[ $visible_len -gt 60 ]]; then
+        # Simple truncation for now
+        display_text="${INPUT_TEXT:0:59}_"
+        visible_len=60
+    fi
+
+    local padding_needed=$((60 - visible_len))
     local padding=$(printf ' %.0s' {1..$padding_needed})
 
     echo -e "${BORDER}${V}${RESET}  ${DIM}│${RESET} ${HIGHLIGHT}${display_text}${RESET}${padding} ${DIM}│${RESET}  ${BORDER}${V}${RESET}"
@@ -376,7 +457,8 @@ draw_main_mode() {
     echo -e "${VL}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Navigate  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..8})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Move Cursor  ${TEXT}Tab${RESET}${DIM} Pattern  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..10})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+A${RESET}${DIM} Select All  ${TEXT}Ctrl+X${RESET}${DIM} Cut  ${TEXT}Ctrl+V${RESET}${DIM} Paste  ${TEXT}Ctrl+P${RESET}${DIM} Patterns${RESET}$(printf ' %.0s' {1..4})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Success message if needed
@@ -1035,14 +1117,54 @@ main() {
                                     CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
                                     draw_ui
                                     ;;
-                                "C") # Right arrow key - cycle forward through patterns
-                                    local total=${#PATTERN_ORDER[@]}
-                                    CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
+                                "C") # Right arrow key
+                                    # Check for Ctrl modifier (1;5C)
+                                    if [[ "$char3" == "1" ]]; then
+                                        IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
+                                        IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
+                                        # Ctrl+Right - cycle forward through patterns
+                                        local total=${#PATTERN_ORDER[@]}
+                                        CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
+                                        draw_ui
+                                    else
+                                        # Move cursor right
+                                        if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
+                                            ((CURSOR_POS++))
+                                            SELECTION_START=-1
+                                            SELECTION_END=-1
+                                            draw_ui
+                                        fi
+                                    fi
+                                    ;;
+                                "D") # Left arrow key
+                                    # Check for Ctrl modifier
+                                    if [[ "$char3" == "1" ]]; then
+                                        IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
+                                        IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
+                                        # Ctrl+Left - cycle backwards through patterns
+                                        local total=${#PATTERN_ORDER[@]}
+                                        CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
+                                        draw_ui
+                                    else
+                                        # Move cursor left
+                                        if [[ $CURSOR_POS -gt 0 ]]; then
+                                            ((CURSOR_POS--))
+                                            SELECTION_START=-1
+                                            SELECTION_END=-1
+                                            draw_ui
+                                        fi
+                                    fi
+                                    ;;
+                                "H") # Home key
+                                    CURSOR_POS=0
+                                    SELECTION_START=-1
+                                    SELECTION_END=-1
                                     draw_ui
                                     ;;
-                                "D") # Left arrow key - cycle backwards through patterns
-                                    local total=${#PATTERN_ORDER[@]}
-                                    CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
+                                "F") # End key
+                                    CURSOR_POS=${#INPUT_TEXT}
+                                    SELECTION_START=-1
+                                    SELECTION_END=-1
                                     draw_ui
                                     ;;
                             esac
@@ -1067,21 +1189,135 @@ main() {
                         fi
                         ;;
                     $'\x7f'|$'\b') # Backspace
-                        if [[ ${#INPUT_TEXT} -gt 0 ]]; then
-                            INPUT_TEXT="${INPUT_TEXT:0:-1}"
+                        # If selection exists, delete it
+                        if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                            local sel_start=$SELECTION_START
+                            local sel_end=$SELECTION_END
+
+                            # Ensure correct order
+                            if [[ $sel_start -gt $sel_end ]]; then
+                                local tmp=$sel_start
+                                sel_start=$sel_end
+                                sel_end=$tmp
+                            fi
+
+                            INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                            CURSOR_POS=$sel_start
+                            SELECTION_START=-1
+                            SELECTION_END=-1
+                            draw_ui
+                        elif [[ $CURSOR_POS -gt 0 ]]; then
+                            # Delete character before cursor
+                            INPUT_TEXT="${INPUT_TEXT:0:$(($CURSOR_POS - 1))}${INPUT_TEXT:$CURSOR_POS}"
+                            ((CURSOR_POS--))
                             draw_ui
                         fi
                         ;;
                     $'\x15') # Ctrl+U - clear
                         INPUT_TEXT=""
+                        CURSOR_POS=0
+                        SELECTION_START=-1
+                        SELECTION_END=-1
                         draw_ui
+                        ;;
+                    $'\x01') # Ctrl+A - select all
+                        if [[ ${#INPUT_TEXT} -gt 0 ]]; then
+                            SELECTION_START=0
+                            SELECTION_END=${#INPUT_TEXT}
+                            CURSOR_POS=${#INPUT_TEXT}
+                            draw_ui
+                        fi
+                        ;;
+                    $'\x18') # Ctrl+X - cut
+                        if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                            local sel_start=$SELECTION_START
+                            local sel_end=$SELECTION_END
+
+                            # Ensure correct order
+                            if [[ $sel_start -gt $sel_end ]]; then
+                                local tmp=$sel_start
+                                sel_start=$sel_end
+                                sel_end=$tmp
+                            fi
+
+                            # Copy selected text to clipboard
+                            local selected_text="${INPUT_TEXT:$sel_start:$(($sel_end - $sel_start))}"
+                            if copy_raw_to_clipboard "$selected_text"; then
+                                # Remove selected text
+                                INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                                CURSOR_POS=$sel_start
+                                SELECTION_START=-1
+                                SELECTION_END=-1
+
+                                SUCCESS_MSG="Cut to clipboard!"
+                                SHOW_SUCCESS=1
+                                draw_ui
+                                (sleep 2; SHOW_SUCCESS=0; draw_ui) &
+                            fi
+                        fi
+                        ;;
+                    $'\x16') # Ctrl+V - paste
+                        local pasted=$(paste_from_clipboard)
+                        if [[ -n "$pasted" ]]; then
+                            # Delete selection if exists
+                            if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                                local sel_start=$SELECTION_START
+                                local sel_end=$SELECTION_END
+
+                                # Ensure correct order
+                                if [[ $sel_start -gt $sel_end ]]; then
+                                    local tmp=$sel_start
+                                    sel_start=$sel_end
+                                    sel_end=$tmp
+                                fi
+
+                                INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                                CURSOR_POS=$sel_start
+                                SELECTION_START=-1
+                                SELECTION_END=-1
+                            fi
+
+                            # Insert pasted text at cursor
+                            local max_remaining=$((59 - ${#INPUT_TEXT}))
+                            if [[ ${#pasted} -gt $max_remaining ]]; then
+                                pasted="${pasted:0:$max_remaining}"
+                            fi
+
+                            INPUT_TEXT="${INPUT_TEXT:0:$CURSOR_POS}${pasted}${INPUT_TEXT:$CURSOR_POS}"
+                            CURSOR_POS=$(($CURSOR_POS + ${#pasted}))
+
+                            SUCCESS_MSG="Pasted from clipboard!"
+                            SHOW_SUCCESS=1
+                            draw_ui
+                            (sleep 2; SHOW_SUCCESS=0; draw_ui) &
+                        fi
                         ;;
                     $'\x03') # Ctrl+C - exit
                         exit 0
                         ;;
                     *) # Regular character - including 'p' and 'P'
+                        # Delete selection if exists
+                        if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                            local sel_start=$SELECTION_START
+                            local sel_end=$SELECTION_END
+
+                            # Ensure correct order
+                            if [[ $sel_start -gt $sel_end ]]; then
+                                local tmp=$sel_start
+                                sel_start=$sel_end
+                                sel_end=$tmp
+                            fi
+
+                            INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                            CURSOR_POS=$sel_start
+                            SELECTION_START=-1
+                            SELECTION_END=-1
+                        fi
+
+                        # Insert character at cursor position
                         if [[ ${#INPUT_TEXT} -lt 59 ]]; then
-                            INPUT_TEXT+="$char"
+                            INPUT_TEXT="${INPUT_TEXT:0:$CURSOR_POS}${char}${INPUT_TEXT:$CURSOR_POS}"
+                            ((CURSOR_POS++))
                             draw_ui
                         fi
                         ;;
