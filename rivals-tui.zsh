@@ -457,8 +457,8 @@ draw_main_mode() {
     echo -e "${VL}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Move Cursor  ${TEXT}Tab${RESET}${DIM} Pattern  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..10})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+A${RESET}${DIM} Select All  ${TEXT}Ctrl+X${RESET}${DIM} Cut  ${TEXT}Ctrl+V${RESET}${DIM} Paste  ${TEXT}Ctrl+P${RESET}${DIM} Patterns${RESET}$(printf ' %.0s' {1..4})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Navigate  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..8})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+← →${RESET}${DIM} Cursor  ${TEXT}Ctrl+A${RESET}${DIM} Select  ${TEXT}Ctrl+X/V${RESET}${DIM} Cut/Paste${RESET}$(printf ' %.0s' {1..10})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Success message if needed
@@ -1117,41 +1117,41 @@ main() {
                                     CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
                                     draw_ui
                                     ;;
-                                "C") # Right arrow key
-                                    # Check for Ctrl modifier (1;5C)
-                                    if [[ "$char3" == "1" ]]; then
-                                        IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
-                                        IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
-                                        # Ctrl+Right - cycle forward through patterns
-                                        local total=${#PATTERN_ORDER[@]}
-                                        CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
-                                        draw_ui
-                                    else
-                                        # Move cursor right
-                                        if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
-                                            ((CURSOR_POS++))
-                                            SELECTION_START=-1
-                                            SELECTION_END=-1
-                                            draw_ui
-                                        fi
-                                    fi
+                                "C") # Right arrow key - cycle forward through patterns
+                                    local total=${#PATTERN_ORDER[@]}
+                                    CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
+                                    draw_ui
                                     ;;
-                                "D") # Left arrow key
-                                    # Check for Ctrl modifier
-                                    if [[ "$char3" == "1" ]]; then
-                                        IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
+                                "D") # Left arrow key - cycle backwards through patterns
+                                    local total=${#PATTERN_ORDER[@]}
+                                    CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
+                                    draw_ui
+                                    ;;
+                                "1") # Possible modifier sequence (Ctrl+arrows)
+                                    IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
+                                    if [[ "$char4" == ";" ]]; then
                                         IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
-                                        # Ctrl+Left - cycle backwards through patterns
-                                        local total=${#PATTERN_ORDER[@]}
-                                        CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
-                                        draw_ui
-                                    else
-                                        # Move cursor left
-                                        if [[ $CURSOR_POS -gt 0 ]]; then
-                                            ((CURSOR_POS--))
-                                            SELECTION_START=-1
-                                            SELECTION_END=-1
-                                            draw_ui
+                                        if [[ "$char5" == "5" ]]; then
+                                            # Ctrl modifier detected
+                                            IFS= read -r -s -t 0.1 -k 1 char6 2>/dev/null
+                                            case "$char6" in
+                                                "C") # Ctrl+Right - move cursor right
+                                                    if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
+                                                        ((CURSOR_POS++))
+                                                        SELECTION_START=-1
+                                                        SELECTION_END=-1
+                                                        draw_ui
+                                                    fi
+                                                    ;;
+                                                "D") # Ctrl+Left - move cursor left
+                                                    if [[ $CURSOR_POS -gt 0 ]]; then
+                                                        ((CURSOR_POS--))
+                                                        SELECTION_START=-1
+                                                        SELECTION_END=-1
+                                                        draw_ui
+                                                    fi
+                                                    ;;
+                                            esac
                                         fi
                                     fi
                                     ;;
