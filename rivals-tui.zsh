@@ -61,6 +61,11 @@ typeset -A BUILTIN_PATTERNS=(
     "Spring" "G E Y O P"
     "Cherry" "P M R O Y"
     "Matrix" "G T A"
+    "Fire" "R R O Y O R R"
+    "Ice" "B B I A I B B"
+    "Electric" "B U B U E Y E"
+    "Candy" "P P M Y Y O P P"
+    "Pulse" "R R R B B B R R R"
 )
 
 typeset -A BUILTIN_ICONS=(
@@ -74,6 +79,11 @@ typeset -A BUILTIN_ICONS=(
     "Spring" "🌸"
     "Cherry" "🍒"
     "Matrix" "💚"
+    "Fire" "🔥"
+    "Ice" "🧊"
+    "Electric" "⚡"
+    "Candy" "🍬"
+    "Pulse" "💗"
 )
 
 # Dynamic pattern storage
@@ -88,6 +98,9 @@ CLIPBOARD_CMD=""
 CURRENT_MODE="main"  # main, pattern_creator, pattern_manager
 SHOW_SUCCESS=0
 SUCCESS_MSG=""
+SUCCESS_TIME=0
+REPEAT_MODE=0  # 0=continuous, 1=per word, 2=per phrase
+SYMMETRY_MODE=0  # 0=off, 1=mirror, 2=full (ensures complete pattern)
 
 # Text editor state
 CURSOR_POS=0  # Current cursor position (0 = before first char)
@@ -237,21 +250,244 @@ convert_to_rivals() {
     local text=$1
     local pattern_name=$2
     local result=""
-    local color_idx=1
 
     local -a pattern
     pattern=(${=ALL_PATTERNS[$pattern_name]})
 
-    for ((i=1; i<=${#text}; i++)); do
-        local char="${text:$((i-1)):1}"
-        if [[ "$char" =~ [[:alnum:]] ]]; then
-            local color="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
-            result+="#${color}${char}"
-            ((color_idx++))
+    if [[ $REPEAT_MODE -eq 2 ]]; then
+        # Per phrase mode
+        if [[ $SYMMETRY_MODE -eq 2 ]]; then
+            # Full symmetry - ensure complete pattern with rightmost as center
+            local -a full_pattern=()
+            # Build full symmetrical pattern: colors + reverse (minus center)
+            for ((i=1; i<${#pattern[@]}; i++)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+            # Add rightmost color as center
+            full_pattern+=("${pattern[${#pattern[@]}]}")
+            # Add reversed colors
+            for ((i=${#pattern[@]}-1; i>=1; i--)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+
+            # Apply full pattern to text
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color="${full_pattern[$(( ((color_idx - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+            # Phrase with symmetry - count total alphanum chars first
+            local total_chars=0
+            for ((i=1; i<=${#text}; i++)); do
+                local c="${text:$((i-1)):1}"
+                if [[ "$c" =~ [[:alnum:]] ]]; then
+                    ((total_chars++))
+                fi
+            done
+
+            local char_count=0
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    ((char_count++))
+                    local pos=$char_count
+                    # Mirror position for second half
+                    if [[ $char_count -gt $(( (total_chars + 1) / 2 )) ]]; then
+                        pos=$(( total_chars - char_count + 1 ))
+                    fi
+                    local color="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                else
+                    result+="$char"
+                fi
+            done
         else
-            result+="$char"
+            # Per phrase without symmetry - just continuous
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
         fi
-    done
+    elif [[ $REPEAT_MODE -eq 1 ]]; then
+        # Per word mode
+        local word=""
+        local in_word=0
+
+        for ((i=1; i<=${#text}; i++)); do
+            local char="${text:$((i-1)):1}"
+            if [[ "$char" =~ [[:alnum:]] ]]; then
+                word+="$char"
+                in_word=1
+            else
+                # Process the completed word if any
+                if [[ $in_word -eq 1 && -n "$word" ]]; then
+                    local word_len=${#word}
+
+                    if [[ $SYMMETRY_MODE -eq 2 ]]; then
+                        # Full symmetry for word - ensure complete pattern
+                        local -a full_pattern=()
+                        # Build full symmetrical pattern
+                        for ((j=1; j<${#pattern[@]}; j++)); do
+                            full_pattern+=("${pattern[$j]}")
+                        done
+                        # Add rightmost color as center
+                        full_pattern+=("${pattern[${#pattern[@]}]}")
+                        # Add reversed colors
+                        for ((j=${#pattern[@]}-1; j>=1; j--)); do
+                            full_pattern+=("${pattern[$j]}")
+                        done
+
+                        # Apply full pattern to word
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local color="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                            result+="#${color}${wchar}"
+                        done
+                    elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+                        # Word with symmetry
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local pos=$j
+                            # Mirror position for second half of word
+                            if [[ $j -gt $(( (word_len + 1) / 2 )) ]]; then
+                                pos=$(( word_len - j + 1 ))
+                            fi
+                            local color="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                            result+="#${color}${wchar}"
+                        done
+                    else
+                        # Word without symmetry - reset pattern at each word
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local color="${pattern[$(( ((j - 1) % ${#pattern[@]}) + 1 ))]}"
+                            result+="#${color}${wchar}"
+                        done
+                    fi
+
+                    word=""
+                    in_word=0
+                fi
+                result+="$char"
+            fi
+        done
+
+        # Process any remaining word
+        if [[ -n "$word" ]]; then
+            local word_len=${#word}
+
+            if [[ $SYMMETRY_MODE -eq 2 ]]; then
+                # Full symmetry for word
+                local -a full_pattern=()
+                for ((j=1; j<${#pattern[@]}; j++)); do
+                    full_pattern+=("${pattern[$j]}")
+                done
+                full_pattern+=("${pattern[${#pattern[@]}]}")
+                for ((j=${#pattern[@]}-1; j>=1; j--)); do
+                    full_pattern+=("${pattern[$j]}")
+                done
+
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local color="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="#${color}${wchar}"
+                done
+            elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local pos=$j
+                    if [[ $j -gt $(( (word_len + 1) / 2 )) ]]; then
+                        pos=$(( word_len - j + 1 ))
+                    fi
+                    local color="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${wchar}"
+                done
+            else
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local color="${pattern[$(( ((j - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${wchar}"
+                done
+            fi
+        fi
+    else
+        # Continuous mode (0)
+        if [[ $SYMMETRY_MODE -eq 2 ]]; then
+            # Full symmetry - ensure complete pattern
+            local -a full_pattern=()
+            for ((i=1; i<${#pattern[@]}; i++)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+            full_pattern+=("${pattern[${#pattern[@]}]}")
+            for ((i=${#pattern[@]}-1; i>=1; i--)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+
+            # Apply full pattern
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color="${full_pattern[$(( ((color_idx - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+            # Continuous with symmetry - same as phrase symmetry
+            local total_chars=0
+            for ((i=1; i<=${#text}; i++)); do
+                local c="${text:$((i-1)):1}"
+                if [[ "$c" =~ [[:alnum:]] ]]; then
+                    ((total_chars++))
+                fi
+            done
+
+            local char_count=0
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    ((char_count++))
+                    local pos=$char_count
+                    if [[ $char_count -gt $(( (total_chars + 1) / 2 )) ]]; then
+                        pos=$(( total_chars - char_count + 1 ))
+                    fi
+                    local color="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                else
+                    result+="$char"
+                fi
+            done
+        else
+            # Continuous without symmetry
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="#${color}${char}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        fi
+    fi
 
     echo -n "$result"
 }
@@ -261,7 +497,6 @@ generate_rainbow() {
     local text=$1
     local pattern_name=$2
     local result=""
-    local color_idx=1
 
     local -a pattern
     pattern=(${=ALL_PATTERNS[$pattern_name]})
@@ -271,16 +506,231 @@ generate_rainbow() {
         return
     fi
 
-    for ((i=1; i<=${#text}; i++)); do
-        local char="${text:$((i-1)):1}"
-        if [[ "$char" =~ [[:alnum:]] ]]; then
-            local color_code="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
-            result+="${COLORS[$color_code]}${char}${RESET}"
-            ((color_idx++))
+    if [[ $REPEAT_MODE -eq 2 ]]; then
+        # Per phrase mode
+        if [[ $SYMMETRY_MODE -eq 2 ]]; then
+            # Full symmetry - ensure complete pattern
+            local -a full_pattern=()
+            for ((i=1; i<${#pattern[@]}; i++)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+            full_pattern+=("${pattern[${#pattern[@]}]}")
+            for ((i=${#pattern[@]}-1; i>=1; i--)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color_code="${full_pattern[$(( ((color_idx - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+            # Phrase with symmetry
+            local total_chars=0
+            for ((i=1; i<=${#text}; i++)); do
+                local c="${text:$((i-1)):1}"
+                if [[ "$c" =~ [[:alnum:]] ]]; then
+                    ((total_chars++))
+                fi
+            done
+
+            local char_count=0
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    ((char_count++))
+                    local pos=$char_count
+                    if [[ $char_count -gt $(( (total_chars + 1) / 2 )) ]]; then
+                        pos=$(( total_chars - char_count + 1 ))
+                    fi
+                    local color_code="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                else
+                    result+="$char"
+                fi
+            done
         else
-            result+="$char"
+            # Per phrase without symmetry
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color_code="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
         fi
-    done
+    elif [[ $REPEAT_MODE -eq 1 ]]; then
+        # Per word mode
+        local word=""
+        local in_word=0
+
+        for ((i=1; i<=${#text}; i++)); do
+            local char="${text:$((i-1)):1}"
+            if [[ "$char" =~ [[:alnum:]] ]]; then
+                word+="$char"
+                in_word=1
+            else
+                if [[ $in_word -eq 1 && -n "$word" ]]; then
+                    local word_len=${#word}
+
+                    if [[ $SYMMETRY_MODE -eq 2 ]]; then
+                        # Full symmetry for word - ensure complete pattern
+                        local -a full_pattern=()
+                        # Build full symmetrical pattern
+                        for ((j=1; j<${#pattern[@]}; j++)); do
+                            full_pattern+=("${pattern[$j]}")
+                        done
+                        # Add rightmost color as center
+                        full_pattern+=("${pattern[${#pattern[@]}]}")
+                        # Add reversed colors
+                        for ((j=${#pattern[@]}-1; j>=1; j--)); do
+                            full_pattern+=("${pattern[$j]}")
+                        done
+
+                        # Apply full pattern to word
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local color="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                            result+="#${color}${wchar}"
+                        done
+                    elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+                        # Word with symmetry
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local pos=$j
+                            if [[ $j -gt $(( (word_len + 1) / 2 )) ]]; then
+                                pos=$(( word_len - j + 1 ))
+                            fi
+                            local color_code="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                            result+="${COLORS[$color_code]}${wchar}${RESET}"
+                        done
+                    else
+                        # Word without symmetry
+                        for ((j=1; j<=$word_len; j++)); do
+                            local wchar="${word:$((j-1)):1}"
+                            local color_code="${pattern[$(( ((j - 1) % ${#pattern[@]}) + 1 ))]}"
+                            result+="${COLORS[$color_code]}${wchar}${RESET}"
+                        done
+                    fi
+
+                    word=""
+                    in_word=0
+                fi
+                result+="$char"
+            fi
+        done
+
+        if [[ -n "$word" ]]; then
+            local word_len=${#word}
+
+            if [[ $SYMMETRY_MODE -eq 2 ]]; then
+                # Full symmetry for word
+                local -a full_pattern=()
+                for ((j=1; j<${#pattern[@]}; j++)); do
+                    full_pattern+=("${pattern[$j]}")
+                done
+                full_pattern+=("${pattern[${#pattern[@]}]}")
+                for ((j=${#pattern[@]}-1; j>=1; j--)); do
+                    full_pattern+=("${pattern[$j]}")
+                done
+
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local color_code="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${wchar}${RESET}"
+                done
+            elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local pos=$j
+                    if [[ $j -gt $(( (word_len + 1) / 2 )) ]]; then
+                        pos=$(( word_len - j + 1 ))
+                    fi
+                    local color_code="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${wchar}${RESET}"
+                done
+            else
+                for ((j=1; j<=$word_len; j++)); do
+                    local wchar="${word:$((j-1)):1}"
+                    local color_code="${pattern[$(( ((j - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${wchar}${RESET}"
+                done
+            fi
+        fi
+    else
+        # Continuous mode
+        if [[ $SYMMETRY_MODE -eq 2 ]]; then
+            # Full symmetry - ensure complete pattern
+            local -a full_pattern=()
+            for ((i=1; i<${#pattern[@]}; i++)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+            full_pattern+=("${pattern[${#pattern[@]}]}")
+            for ((i=${#pattern[@]}-1; i>=1; i--)); do
+                full_pattern+=("${pattern[$i]}")
+            done
+
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color_code="${full_pattern[$(( ((color_idx - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        elif [[ $SYMMETRY_MODE -eq 1 ]]; then
+            # Continuous with symmetry
+            local total_chars=0
+            for ((i=1; i<=${#text}; i++)); do
+                local c="${text:$((i-1)):1}"
+                if [[ "$c" =~ [[:alnum:]] ]]; then
+                    ((total_chars++))
+                fi
+            done
+
+            local char_count=0
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    ((char_count++))
+                    local pos=$char_count
+                    if [[ $char_count -gt $(( (total_chars + 1) / 2 )) ]]; then
+                        pos=$(( total_chars - char_count + 1 ))
+                    fi
+                    local color_code="${pattern[$(( ((pos - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                else
+                    result+="$char"
+                fi
+            done
+        else
+            # Continuous without symmetry
+            local color_idx=1
+            for ((i=1; i<=${#text}; i++)); do
+                local char="${text:$((i-1)):1}"
+                if [[ "$char" =~ [[:alnum:]] ]]; then
+                    local color_code="${pattern[$(( ((color_idx - 1) % ${#pattern[@]}) + 1 ))]}"
+                    result+="${COLORS[$color_code]}${char}${RESET}"
+                    ((color_idx++))
+                else
+                    result+="$char"
+                fi
+            done
+        fi
+    fi
 
     echo -n "$result"
 }
@@ -448,7 +898,21 @@ draw_main_mode() {
     local next_pattern="${PATTERN_ORDER[$next_index]}"
     local next_icon="${ALL_ICONS[$next_pattern]}"
 
-    echo -e "${BORDER}${V}${RESET}  ${DIM}← ${prev_icon}${RESET}  ${current_icon} ${ACCENT}${BOLD}${current_pattern}${RESET}${is_custom} ${color_sample} ${DIM}(${CURRENT_PATTERN_INDEX}/${total_patterns})${RESET}  ${DIM}${next_icon} →${RESET}  ${BORDER}${V}${RESET}"
+    # Show repeat mode and symmetry indicators
+    local repeat_indicator=""
+    case $REPEAT_MODE in
+        1) repeat_indicator="${HIGHLIGHT}[WORD]${RESET}" ;;
+        2) repeat_indicator="${HIGHLIGHT}[PHRASE]${RESET}" ;;
+        *) repeat_indicator="${DIM}[CONT]${RESET}" ;;
+    esac
+
+    local sym_indicator=""
+    case $SYMMETRY_MODE in
+        1) sym_indicator=" ${ACCENT}[MIRROR]${RESET}" ;;
+        2) sym_indicator=" ${HIGHLIGHT}[FULL]${RESET}" ;;
+    esac
+
+    echo -e "${BORDER}${V}${RESET}  ${DIM}← ${prev_icon}${RESET}  ${current_icon} ${ACCENT}${BOLD}${current_pattern}${RESET}${is_custom} ${repeat_indicator}${sym_indicator} ${color_sample} ${DIM}(${CURRENT_PATTERN_INDEX}/${total_patterns})${RESET}  ${DIM}${next_icon} →${RESET}  ${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Controls
@@ -457,8 +921,8 @@ draw_main_mode() {
     echo -e "${VL}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Navigate  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..8})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+← →${RESET}${DIM} Cursor  ${TEXT}Ctrl+A${RESET}${DIM} Select  ${TEXT}Ctrl+X/V${RESET}${DIM} Cut/Paste${RESET}$(printf ' %.0s' {1..10})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}← →${RESET}${DIM} Navigate  ${TEXT}Enter${RESET}${DIM} Copy  ${TEXT}Ctrl+R${RESET}${DIM} Repeat  ${TEXT}Esc${RESET}${DIM} Quit${RESET}$(printf ' %.0s' {1..3})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+P${RESET}${DIM} Patterns  ${TEXT}Ctrl+S${RESET}${DIM} Symmetry  ${TEXT}Ctrl+A${RESET}${DIM} Select${RESET}$(printf ' %.0s' {1..10})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Success message if needed
@@ -516,7 +980,7 @@ draw_pattern_creator() {
         color_highlight="${SELECTED}"
     fi
 
-    echo -e "${BORDER}${V}${RESET}  ${color_highlight}${TEXT}Colors:${RESET} ${DIM}(Space to add/remove, Enter when done)${RESET}$(printf ' %.0s' {1..20})${BORDER}${V}${RESET}"
+    echo -e "${BORDER}${V}${RESET}  ${color_highlight}${TEXT}Colors:${RESET} ${DIM}(Space to add, Backspace to remove last)${RESET}$(printf ' %.0s' {1..20})${BORDER}${V}${RESET}"
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Show all available colors in a grid
@@ -528,23 +992,30 @@ draw_pattern_creator() {
         local name="${RIVALS[$code]}"
         local selected_mark=""
 
-        # Check if color is in pattern
-        local is_selected=0
+        # Count how many times this color appears in pattern
+        local color_count=0
         for c in ${CREATOR_COLORS[@]}; do
             if [[ "$c" == "$code" ]]; then
-                is_selected=1
-                break
+                ((color_count++))
             fi
         done
 
+        local count_display=""
+        if [[ $color_count -gt 0 ]]; then
+            count_display="${color_count}"
+            if [[ $color_count -gt 9 ]]; then
+                count_display="9+"
+            fi
+        fi
+
         if [[ "$CREATOR_MODE" == "colors" && $i -eq $CREATOR_COLOR_CURSOR ]]; then
-            if [[ $is_selected -eq 1 ]]; then
-                color_line+="${SELECTED}${COLORS[$code]}● ${code}${RESET} "
+            if [[ $color_count -gt 0 ]]; then
+                color_line+="${SELECTED}${COLORS[$code]}${count_display} ${code}${RESET} "
             else
                 color_line+="${SELECTED}${COLORS[$code]}○ ${code}${RESET} "
             fi
-        elif [[ $is_selected -eq 1 ]]; then
-            color_line+="${COLORS[$code]}● ${code}${RESET} "
+        elif [[ $color_count -gt 0 ]]; then
+            color_line+="${COLORS[$code]}${count_display} ${code}${RESET} "
         else
             color_line+="${DIM}${COLORS[$code]}○ ${code}${RESET} "
         fi
@@ -575,24 +1046,34 @@ draw_pattern_creator() {
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
-    # Preview
+    # Preview with mode indicators
     if [[ ${#CREATOR_COLORS[@]} -gt 0 && -n "$CREATOR_NAME" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${TEXT}Preview:${RESET}$(printf ' %.0s' {1..58})${BORDER}${V}${RESET}"
+        # Show mode indicators
+        local repeat_indicator=""
+        case $REPEAT_MODE in
+            1) repeat_indicator="${HIGHLIGHT}[WORD]${RESET}" ;;
+            2) repeat_indicator="${HIGHLIGHT}[PHRASE]${RESET}" ;;
+            *) repeat_indicator="${DIM}[CONT]${RESET}" ;;
+        esac
+
+        local sym_indicator=""
+        case $SYMMETRY_MODE in
+            1) sym_indicator=" ${ACCENT}[MIRROR]${RESET}" ;;
+            2) sym_indicator=" ${HIGHLIGHT}[FULL]${RESET}" ;;
+        esac
+
+        echo -e "${BORDER}${V}${RESET}  ${TEXT}Preview:${RESET} ${repeat_indicator}${sym_indicator}$(printf ' %.0s' {1..45})${BORDER}${V}${RESET}"
 
         local test_text="The quick brown fox jumps"
-        local preview=""
-        local color_idx=1
 
-        for ((i=1; i<=${#test_text}; i++)); do
-            local char="${test_text:$((i-1)):1}"
-            if [[ "$char" =~ [[:alnum:]] ]]; then
-                local color="${CREATOR_COLORS[$(( ((color_idx - 1) % ${#CREATOR_COLORS[@]}) + 1 ))]}"
-                preview+="${COLORS[$color]}${char}${RESET}"
-                ((color_idx++))
-            else
-                preview+="$char"
-            fi
-        done
+        # Temporarily set pattern for preview
+        local temp_pattern="${CREATOR_COLORS[*]}"
+        ALL_PATTERNS["_preview_temp_"]="$temp_pattern"
+
+        local preview=$(generate_rainbow "$test_text" "_preview_temp_")
+
+        # Clean up temp pattern
+        unset ALL_PATTERNS["_preview_temp_"]
 
         echo -e "${BORDER}${V}${RESET}  ${preview}$(printf ' %.0s' {1..$((66 - ${#test_text}))})${BORDER}${V}${RESET}"
     else
@@ -613,8 +1094,11 @@ draw_pattern_creator() {
     elif [[ "$CREATOR_MODE" == "icon" ]]; then
         echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}←/→${RESET}${DIM} select, ${TEXT}Space${RESET}${DIM} choose, ${TEXT}Tab/↓${RESET}${DIM} continue, ${TEXT}↑${RESET}${DIM} back${RESET}$(printf ' %.0s' {1..15})${BORDER}${V}${RESET}"
     elif [[ "$CREATOR_MODE" == "colors" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}Arrows to move, ${TEXT}Space${RESET}${DIM} toggle, ${TEXT}S${RESET}${DIM} save, ${TEXT}Esc${RESET}${DIM} cancel${RESET}$(printf ' %.0s' {1..15})${BORDER}${V}${RESET}"
+        echo -e "${BORDER}${V}${RESET}  ${DIM}Arrows move, ${TEXT}Space${RESET}${DIM} add, ${TEXT}Backspace${RESET}${DIM} del, ${TEXT}S${RESET}${DIM} save${RESET}$(printf ' %.0s' {1..13})${BORDER}${V}${RESET}"
     fi
+
+    # Show controls for repeat/symmetry modes in all creator modes
+    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+R${RESET}${DIM} Repeat mode, ${TEXT}Ctrl+S${RESET}${DIM} Symmetry toggle${RESET}$(printf ' %.0s' {1..20})${BORDER}${V}${RESET}"
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
@@ -670,16 +1154,26 @@ draw_pattern_manager() {
         pattern_colors=(${=ALL_PATTERNS[$pattern]})
         local color_sample=""
         local sample_count=0
+        local max_preview=8  # Show more colors
 
         for color_code in ${pattern_colors[@]}; do
-            if [[ $sample_count -lt 5 ]]; then
+            if [[ $sample_count -lt $max_preview ]]; then
                 color_sample+="${COLORS[$color_code]}●${RESET}"
                 ((sample_count++))
             else
-                color_sample+="..."
+                # Show count of remaining colors
+                local remaining=$(( ${#pattern_colors[@]} - $sample_count ))
+                if [[ $remaining -gt 0 ]]; then
+                    color_sample+=" ${DIM}+${remaining}${RESET}"
+                fi
                 break
             fi
         done
+
+        # If pattern has repeated colors, show total length
+        if [[ ${#pattern_colors[@]} -gt 13 ]]; then
+            color_sample+=" ${DIM}[${#pattern_colors[@]}]${RESET}"
+        fi
 
         echo -e "${BORDER}${V}${RESET}  ${is_selected}${icon} ${pattern}${RESET} ${color_sample} ${is_builtin}$(printf ' %.0s' {1..$((50 - ${#pattern} - ${#is_builtin}))})${BORDER}${V}${RESET}"
     done
@@ -714,6 +1208,15 @@ draw_pattern_manager() {
 
 # Draw complete UI
 draw_ui() {
+    # Check if success message should be cleared
+    if [[ $SHOW_SUCCESS -eq 1 ]]; then
+        local current_time=$(date +%s)
+        if [[ $((current_time - SUCCESS_TIME)) -ge 2 ]]; then
+            SHOW_SUCCESS=0
+            SUCCESS_MSG=""
+        fi
+    fi
+
     tput cup 0 0
     tput ed
     draw_header
@@ -785,6 +1288,14 @@ handle_creator_input() {
                         esac
                     fi
                     ;;
+                $'\x12') # Ctrl+R - Cycle through repeat modes
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                    draw_ui
+                    ;;
+                $'\x13') # Ctrl+S - Cycle through symmetry modes
+                    SYMMETRY_MODE=$(( (SYMMETRY_MODE + 1) % 3 ))
+                    draw_ui
+                    ;;
                 *) # Regular character
                     if [[ ${#CREATOR_NAME} -lt 20 ]]; then
                         CREATOR_NAME+="$char"
@@ -844,6 +1355,14 @@ handle_creator_input() {
                     CREATOR_ICON="${icons[$CREATOR_CURSOR]}"
                     draw_ui
                     ;;
+                $'\x12') # Ctrl+R - Cycle through repeat modes
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                    draw_ui
+                    ;;
+                $'\x13') # Ctrl+S - Cycle through symmetry modes
+                    SYMMETRY_MODE=$(( (SYMMETRY_MODE + 1) % 3 ))
+                    draw_ui
+                    ;;
             esac
             ;;
 
@@ -890,30 +1409,21 @@ handle_creator_input() {
                         esac
                     fi
                     ;;
-                ' ') # Space - toggle color
+                ' ') # Space - add color (allows duplicates)
                     local color_codes=(Y O R P M U B I A T G E K)
                     local selected_code="${color_codes[$CREATOR_COLOR_CURSOR]}"
 
-                    # Check if color is already selected
-                    local found=0
-                    local new_colors=()
-                    for c in ${CREATOR_COLORS[@]}; do
-                        if [[ "$c" == "$selected_code" ]]; then
-                            found=1
-                        else
-                            new_colors+=("$c")
-                        fi
-                    done
-
-                    if [[ $found -eq 0 ]]; then
-                        # Add the color
-                        CREATOR_COLORS+=("$selected_code")
-                    else
-                        # Remove the color
-                        CREATOR_COLORS=("${new_colors[@]}")
-                    fi
+                    # Add the color (allows duplicates)
+                    CREATOR_COLORS+=("$selected_code")
 
                     draw_ui
+                    ;;
+                $'\x7f'|$'\x08') # Backspace/Delete - remove last color
+                    if [[ ${#CREATOR_COLORS[@]} -gt 0 ]]; then
+                        # Remove the last color
+                        CREATOR_COLORS=("${CREATOR_COLORS[@]:0:${#CREATOR_COLORS[@]}-1}")
+                        draw_ui
+                    fi
                     ;;
                 's'|'S') # Save pattern
                     if [[ ${#CREATOR_COLORS[@]} -gt 0 && -n "$CREATOR_NAME" && -n "$CREATOR_ICON" ]]; then
@@ -941,6 +1451,7 @@ handle_creator_input() {
                         CURRENT_MODE="main"
                         SUCCESS_MSG="Pattern '$CREATOR_NAME' saved!"
                         SHOW_SUCCESS=1
+                        SUCCESS_TIME=$(date +%s)
 
                         # Find and select the new pattern
                         for ((i=1; i<=${#PATTERN_ORDER[@]}; i++)); do
@@ -956,10 +1467,15 @@ handle_creator_input() {
                         CREATOR_COLORS=()
 
                         draw_ui
-
-                        # Clear success message after delay
-                        (sleep 2; SHOW_SUCCESS=0; draw_ui) &
                     fi
+                    ;;
+                $'\x12') # Ctrl+R - Cycle through repeat modes
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                    draw_ui
+                    ;;
+                $'\x13') # Ctrl+S - Cycle through symmetry modes
+                    SYMMETRY_MODE=$(( (SYMMETRY_MODE + 1) % 3 ))
+                    draw_ui
                     ;;
             esac
             ;;
@@ -1047,10 +1563,8 @@ handle_manager_input() {
 
                 SUCCESS_MSG="Pattern '$current_pattern' deleted!"
                 SHOW_SUCCESS=1
+                SUCCESS_TIME=$(date +%s)
                 draw_ui
-
-                # Clear success message after delay
-                (sleep 2; SHOW_SUCCESS=0; draw_ui) &
             fi
             ;;
         $'\n'|$'\r') # Enter - select pattern
@@ -1066,8 +1580,7 @@ cleanup() {
     {
         tput cnorm 2>/dev/null
         tput rmcup 2>/dev/null
-        stty echo 2>/dev/null
-        echo -ne "\r\033[K"
+        stty echo ixon 2>/dev/null  # Re-enable echo and flow control
         echo -e "\n${ACCENT}${BOLD}Thanks for using Enhanced Rivals Rainbow Converter!${RESET}\n"
     } 2>/dev/null
     exit 0
@@ -1086,17 +1599,28 @@ main() {
     clear
     tput civis 2>/dev/null
     # Ensure terminal is in correct mode without debug output
-    stty -echo -icanon min 0 2>/dev/null
+    # -ixon disables flow control to allow Ctrl+S
+    stty -echo -icanon -ixon min 0 2>/dev/null
 
     # Initial draw
     draw_ui
 
     # Input loop
     while true; do
-        local char
-        # Suppress all output and ensure silent reading
-        if ! IFS= read -r -s -k 1 char 2>/dev/null; then
-            exit 0
+        unset char
+        # Use timeout to periodically check for message clearing
+        if ! IFS= read -r -s -t 0.5 -k 1 char 2>/dev/null; then
+            # Timeout occurred, check if we need to clear success message
+            if [[ $SHOW_SUCCESS -eq 1 ]]; then
+                local current_time=$(date +%s)
+                if [[ $((current_time - SUCCESS_TIME)) -ge 2 ]]; then
+                    SHOW_SUCCESS=0
+                    SUCCESS_MSG=""
+                    draw_ui
+                fi
+            fi
+            # Debug: About to continue
+            continue
         fi
 
         # Ensure no debug output
@@ -1184,8 +1708,8 @@ main() {
                         if copy_to_clipboard; then
                             SUCCESS_MSG="Copied to clipboard!"
                             SHOW_SUCCESS=1
+                            SUCCESS_TIME=$(date +%s)
                             draw_ui
-                            (sleep 2; SHOW_SUCCESS=0; draw_ui) &
                         fi
                         ;;
                     $'\x7f'|$'\b') # Backspace
@@ -1251,8 +1775,8 @@ main() {
 
                                 SUCCESS_MSG="Cut to clipboard!"
                                 SHOW_SUCCESS=1
+                                SUCCESS_TIME=$(date +%s)
                                 draw_ui
-                                (sleep 2; SHOW_SUCCESS=0; draw_ui) &
                             fi
                         fi
                         ;;
@@ -1288,14 +1812,36 @@ main() {
 
                             SUCCESS_MSG="Pasted from clipboard!"
                             SHOW_SUCCESS=1
+                            SUCCESS_TIME=$(date +%s)
                             draw_ui
-                            (sleep 2; SHOW_SUCCESS=0; draw_ui) &
                         fi
                         ;;
                     $'\x03') # Ctrl+C - exit
                         exit 0
                         ;;
-                    *) # Regular character - including 'p' and 'P'
+                    $'\x12') # Ctrl+R - Cycle through repeat modes
+                        REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                        case $REPEAT_MODE in
+                            0) SUCCESS_MSG="Continuous mode - Pattern flows through text" ;;
+                            1) SUCCESS_MSG="Per word mode - Pattern resets each word" ;;
+                            2) SUCCESS_MSG="Per phrase mode - Single pattern instance" ;;
+                        esac
+                        SHOW_SUCCESS=1
+                        SUCCESS_TIME=$(date +%s)
+                        draw_ui
+                        ;;
+                    $'\x13') # Ctrl+S - Cycle through symmetry modes
+                        SYMMETRY_MODE=$(( (SYMMETRY_MODE + 1) % 3 ))
+                        case $SYMMETRY_MODE in
+                            0) SUCCESS_MSG="Symmetry OFF - Normal pattern flow" ;;
+                            1) SUCCESS_MSG="Mirror symmetry - Text mirrors from center" ;;
+                            2) SUCCESS_MSG="Full symmetry - Complete pattern always shown" ;;
+                        esac
+                        SHOW_SUCCESS=1
+                        SUCCESS_TIME=$(date +%s)
+                        draw_ui
+                        ;;
+                    *) # Regular character
                         # Delete selection if exists
                         if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
                             local sel_start=$SELECTION_START
