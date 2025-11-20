@@ -984,7 +984,8 @@ draw_pattern_creator() {
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
     # Show all available colors in a grid
-    local color_codes=(Y O R P M U B I A T G E K)
+    local -a color_codes
+    color_codes=(Y O R P M U B I A T G E K)
     local color_line="  "
 
     for ((i=1; i<=${#color_codes[@]}; i++)); do
@@ -1248,7 +1249,7 @@ copy_to_clipboard() {
 
 # Handle pattern creator input
 handle_creator_input() {
-    local char=$1
+    char=$1
 
     case "$CREATOR_MODE" in
         "name")
@@ -1391,6 +1392,10 @@ handle_creator_input() {
                             "A") # Up arrow - navigate up in grid or go to icon mode
                                 if [[ $CREATOR_COLOR_CURSOR -gt 6 ]]; then
                                     CREATOR_COLOR_CURSOR=$((CREATOR_COLOR_CURSOR - 6))
+                                    # Ensure cursor is within valid range
+                                    if [[ $CREATOR_COLOR_CURSOR -lt 1 ]]; then
+                                        CREATOR_COLOR_CURSOR=1
+                                    fi
                                 else
                                     # Go back to icon mode
                                     CREATOR_MODE="icon"
@@ -1410,18 +1415,28 @@ handle_creator_input() {
                     fi
                     ;;
                 ' ') # Space - add color (allows duplicates)
-                    local color_codes=(Y O R P M U B I A T G E K)
-                    local selected_code="${color_codes[$CREATOR_COLOR_CURSOR]}"
+                    # Define color codes array locally
+                    local -a color_codes
+                    color_codes=(Y O R P M U B I A T G E K)
 
-                    # Add the color (allows duplicates)
-                    CREATOR_COLORS+=("$selected_code")
+                    # Ensure CREATOR_COLOR_CURSOR is within valid range
+                    if [[ $CREATOR_COLOR_CURSOR -ge 1 && $CREATOR_COLOR_CURSOR -le ${#color_codes[@]} ]]; then
+                        local selected_code="${color_codes[$CREATOR_COLOR_CURSOR]}"
+
+                        # Only add if we got a valid color code
+                        if [[ -n "$selected_code" ]]; then
+                            # Add the color (allows duplicates)
+                            CREATOR_COLORS+=("$selected_code")
+                        fi
+                    fi
 
                     draw_ui
                     ;;
                 $'\x7f'|$'\x08') # Backspace/Delete - remove last color
                     if [[ ${#CREATOR_COLORS[@]} -gt 0 ]]; then
-                        # Remove the last color
-                        CREATOR_COLORS=("${CREATOR_COLORS[@]:0:${#CREATOR_COLORS[@]}-1}")
+                        # FIX: Use proper Zsh array removal syntax (not Bash)
+                        local array_len=${#CREATOR_COLORS[@]}
+                        CREATOR_COLORS[${array_len}]=()
                         draw_ui
                     fi
                     ;;
@@ -1484,7 +1499,7 @@ handle_creator_input() {
 
 # Handle pattern manager input
 handle_manager_input() {
-    local char=$1
+    char=$1
     local total_patterns=${#PATTERN_ORDER[@]}
 
     case "$char" in
@@ -1529,7 +1544,6 @@ handle_manager_input() {
                 CREATOR_MODE="name"
                 CREATOR_NAME="$current_pattern"
                 CREATOR_ICON="${ALL_ICONS[$current_pattern]}"
-                local -a colors
                 colors=(${=ALL_PATTERNS[$current_pattern]})
                 CREATOR_COLORS=("${colors[@]}")
                 CREATOR_CURSOR=1
