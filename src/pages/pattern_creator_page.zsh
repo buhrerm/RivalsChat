@@ -1,3 +1,6 @@
+# Source common UI functions
+source "${0:A:h}/../components/ui_common.zsh"
+
 # Draw pattern creator interface
 draw_pattern_creator() {
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"

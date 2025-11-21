@@ -5,17 +5,14 @@
 
 source "${0:A:h}/../state/app_state.zsh"
 source "${0:A:h}/../utils/constants.zsh"
+source "${0:A:h}/ui_common.zsh"
 
 # Draw the footer component
 draw_footer() {
-    echo -ne "${UI_COLORS[BORDER]}${BOX[VR]}"
-    printf "${BOX[H]}%.0s" {1..$((UI_WIDTH-2))}
-    echo -e "${BOX[VL]}${UI_COLORS[RESET]}"
-
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[DIM]}${UI_COLORS[TEXT]}← →${UI_COLORS[RESET]}${UI_COLORS[DIM]} Navigate  ${UI_COLORS[TEXT]}Enter${UI_COLORS[RESET]}${UI_COLORS[DIM]} Copy  ${UI_COLORS[TEXT]}Ctrl+R${UI_COLORS[RESET]}${UI_COLORS[DIM]} Repeat  ${UI_COLORS[TEXT]}Esc${UI_COLORS[RESET]}${UI_COLORS[DIM]} Quit${UI_COLORS[RESET]}$(printf ' %.0s' {1..3})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[DIM]}${UI_COLORS[TEXT]}Ctrl+P${UI_COLORS[RESET]}${UI_COLORS[DIM]} Patterns  ${UI_COLORS[TEXT]}Ctrl+S${UI_COLORS[RESET]}${UI_COLORS[DIM]} Symmetry  ${UI_COLORS[TEXT]}Ctrl+A${UI_COLORS[RESET]}${UI_COLORS[DIM]} Select${UI_COLORS[RESET]}$(printf ' %.0s' {1..10})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+    draw_divider
+    draw_spacer
+    draw_controls "main"
+    draw_spacer
 
     # Success message if needed
     if [[ $SHOW_SUCCESS -eq 1 ]]; then

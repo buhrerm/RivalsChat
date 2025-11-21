@@ -5,10 +5,11 @@
 
 source "${0:A:h}/../state/app_state.zsh"
 source "${0:A:h}/../utils/constants.zsh"
+source "${0:A:h}/ui_common.zsh"
 
 # Draw the text input component
 draw_input() {
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+    draw_spacer
     echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[TEXT]}Type your text:${UI_COLORS[RESET]}$(printf ' %.0s' {1..51})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
     echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[DIM]}┌──────────────────────────────────────────────────────────────┐${UI_COLORS[RESET]}  ${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
 
@@ -65,7 +66,7 @@ draw_input() {
     local padding_needed=$((PREVIEW_MAX_LENGTH - visible_len))
     local padding=$(printf ' %.0s' {1..$padding_needed})
 
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[DIM]}│${UI_COLORS[RESET]} ${UI_COLORS[HIGHLIGHT]}${display_text}${UI_COLORS[RESET]}${padding} ${UI_COLORS[DIM]}│${UI_COLORS[RESET]}  ${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+    draw_box_content_line "${UI_COLORS[HIGHLIGHT]}${display_text}${UI_COLORS[RESET]}" "$visible_len"
     echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}  ${UI_COLORS[DIM]}└──────────────────────────────────────────────────────────────┘${UI_COLORS[RESET]}  ${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
-    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+    draw_spacer
 }
