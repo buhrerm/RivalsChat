@@ -3,9 +3,7 @@ source "${0:A:h}/../components/ui_common.zsh"
 
 # Draw pattern manager interface
 draw_pattern_manager() {
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}Pattern Manager${RESET}$(printf ' %.0s' {1..51})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    draw_page_header "Pattern Manager"
 
     local total_patterns=${#PATTERN_ORDER[@]}
     local start_idx=1

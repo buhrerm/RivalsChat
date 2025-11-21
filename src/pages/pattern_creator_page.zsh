@@ -3,9 +3,7 @@ source "${0:A:h}/../components/ui_common.zsh"
 
 # Draw pattern creator interface
 draw_pattern_creator() {
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}  ${ACCENT}${BOLD}Pattern Creator${RESET}$(printf ' %.0s' {1..51})${BORDER}${V}${RESET}"
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    draw_page_header "Pattern Creator"
 
     # Name input
     local name_highlight=""

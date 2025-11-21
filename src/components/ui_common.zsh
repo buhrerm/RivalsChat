@@ -87,3 +87,26 @@ draw_divider() {
 draw_spacer() {
     echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
 }
+
+# Draw a simple page header with title
+# Usage: draw_page_header "Page Title"
+draw_page_header() {
+    local title=$1
+    local width=$UI_WIDTH
+
+    # Top border
+    echo -ne "${UI_COLORS[BORDER]}${BOX[TL]}"
+    printf "${BOX[H]}%.0s" {1..$((width-2))}
+    echo -e "${BOX[TR]}${UI_COLORS[RESET]}"
+
+    # Spacer
+    draw_spacer
+
+    # Title
+    local title_len=${#title}
+    local padding=$(( (68 - title_len - 2) / 2 ))
+    echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$padding})${UI_COLORS[ACCENT]}${UI_COLORS[BOLD]}${title}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$((68 - padding - title_len))})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+
+    # Spacer
+    draw_spacer
+}
