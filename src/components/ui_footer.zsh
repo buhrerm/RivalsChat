@@ -1,20 +1,15 @@
 #!/usr/bin/env zsh
 
-# ui_footer.zsh - Footer component
-# Renders controls and status messages
-
 source "${0:A:h}/../state/app_state.zsh"
 source "${0:A:h}/../utils/constants.zsh"
 source "${0:A:h}/ui_common.zsh"
 
-# Draw the footer component
 draw_footer() {
     draw_divider
     draw_spacer
     draw_controls "main"
     draw_spacer
 
-    # Success message if needed
     if [[ $SHOW_SUCCESS -eq 1 ]]; then
         echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..23})${UI_COLORS[SUCCESS]}${UI_COLORS[BOLD]}✓ ${SUCCESS_MSG}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$((68 - 23 - ${#SUCCESS_MSG} - 2))})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
     else
