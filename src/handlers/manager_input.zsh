@@ -7,7 +7,7 @@ handle_manager_input() {
             IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
             if [[ -z "$char2" ]]; then
                 # Just escape - return to main
-                CURRENT_MODE="main"
+                state_handle_escape "pattern_manager"
                 draw_ui
             elif [[ "$char2" == "[" ]]; then
                 IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null

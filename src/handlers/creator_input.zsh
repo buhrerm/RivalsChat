@@ -21,12 +21,7 @@ handle_creator_input() {
                     IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                     if [[ -z "$char2" ]]; then
                         # Just ESC - cancel and return to pattern manager
-                        CURRENT_MODE="pattern_manager"
-                        CREATOR_NAME=""
-                        CREATOR_ICON=""
-                        CREATOR_COLORS=()
-                        CREATOR_CURSOR=1
-                        CREATOR_COLOR_CURSOR=1
+                        state_handle_escape "pattern_creator"
                         draw_ui
                     elif [[ "$char2" == "[" ]]; then
                         IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
@@ -69,12 +64,7 @@ handle_creator_input() {
                     IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                     if [[ -z "$char2" ]]; then
                         # Just ESC - cancel and return to pattern manager
-                        CURRENT_MODE="pattern_manager"
-                        CREATOR_NAME=""
-                        CREATOR_ICON=""
-                        CREATOR_COLORS=()
-                        CREATOR_CURSOR=1
-                        CREATOR_COLOR_CURSOR=1
+                        state_handle_escape "pattern_creator"
                         draw_ui
                     elif [[ "$char2" == "[" ]]; then
                         IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
@@ -123,11 +113,8 @@ handle_creator_input() {
                 $'\x1b') # Escape or arrow keys
                     IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
                     if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to main
-                        CURRENT_MODE="main"
-                        CREATOR_NAME=""
-                        CREATOR_ICON=""
-                        CREATOR_COLORS=()
+                        # Just ESC - cancel and return to pattern manager
+                        state_handle_escape "pattern_creator"
                         draw_ui
                     elif [[ "$char2" == "[" ]]; then
                         IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null

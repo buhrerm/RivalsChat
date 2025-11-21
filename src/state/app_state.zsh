@@ -92,3 +92,24 @@ state_check_success_timeout() {
     fi
     return 1
 }
+
+# Centralized escape/cancel handling
+state_handle_escape() {
+    local from_mode=$1
+
+    case "$from_mode" in
+        "pattern_creator")
+            # From pattern creator → go back to pattern manager
+            CURRENT_MODE="pattern_manager"
+            state_reset_creator
+            ;;
+        "pattern_manager")
+            # From pattern manager → go back to main
+            CURRENT_MODE="main"
+            ;;
+        *)
+            # Default: go to main
+            CURRENT_MODE="main"
+            ;;
+    esac
+}
