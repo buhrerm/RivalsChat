@@ -72,19 +72,15 @@ handle_main_input() {
             elif [[ "$char2" == "[" ]]; then
                 IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
                 case "$char3" in
-                    "C") # Right arrow - move cursor right
-                        if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
-                            ((CURSOR_POS++))
-                            state_reset_selection
-                            draw_ui
-                        fi
+                    "C") # Right arrow - next pattern
+                        local total=${#PATTERN_ORDER[@]}
+                        CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
+                        draw_ui
                         ;;
-                    "D") # Left arrow - move cursor left
-                        if [[ $CURSOR_POS -gt 0 ]]; then
-                            ((CURSOR_POS--))
-                            state_reset_selection
-                            draw_ui
-                        fi
+                    "D") # Left arrow - previous pattern
+                        local total=${#PATTERN_ORDER[@]}
+                        CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
+                        draw_ui
                         ;;
                     "1") # Special keys (Ctrl+Arrow, Ctrl+Shift+Arrow, Shift+Arrow, Ctrl+Shift+C)
                         IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
@@ -208,6 +204,23 @@ handle_main_input() {
             ;;
         $'\x03') # Ctrl+C - Exit
             return 1
+            ;;
+        $'\x0b') # Ctrl+K - Copy selection
+            if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                local sel_start=$SELECTION_START
+                local sel_end=$SELECTION_END
+                if [[ $sel_start -gt $sel_end ]]; then
+                    local tmp=$sel_start
+                    sel_start=$sel_end
+                    sel_end=$tmp
+                fi
+                local selected_text="${INPUT_TEXT:$sel_start:$((sel_end - sel_start))}"
+                echo -n "$selected_text" | eval "$CLIPBOARD_CMD" >/dev/null 2>&1
+                if [[ $? -eq 0 ]]; then
+                    state_show_success "Copied selection!"
+                    draw_ui
+                fi
+            fi
             ;;
         $'\x16') # Ctrl+V - Paste
             local pasted=$(clipboard_paste)
