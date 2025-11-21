@@ -43,7 +43,6 @@ draw_pattern_selector() {
     local repeat_indicator=""
     case $REPEAT_MODE in
         1) repeat_indicator="${UI_COLORS[HIGHLIGHT]}[WORD]${UI_COLORS[RESET]}" ;;
-        2) repeat_indicator="${UI_COLORS[HIGHLIGHT]}[PHRASE]${UI_COLORS[RESET]}" ;;
         *) repeat_indicator="${UI_COLORS[DIM]}[CONT]${UI_COLORS[RESET]}" ;;
     esac
 

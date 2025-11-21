@@ -35,8 +35,8 @@ handle_creator_input() {
                         esac
                     fi
                     ;;
-                $'\x12') # Ctrl+R - Cycle through repeat modes
-                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                $'\x12') # Ctrl+R - Toggle repeat mode
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 2 ))
                     draw_ui
                     ;;
                 $'\x13') # Ctrl+S - Cycle through symmetry modes
@@ -97,8 +97,8 @@ handle_creator_input() {
                     CREATOR_ICON="${icons[$CREATOR_CURSOR]}"
                     draw_ui
                     ;;
-                $'\x12') # Ctrl+R - Cycle through repeat modes
-                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                $'\x12') # Ctrl+R - Toggle repeat mode
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 2 ))
                     draw_ui
                     ;;
                 $'\x13') # Ctrl+S - Cycle through symmetry modes
@@ -222,8 +222,8 @@ handle_creator_input() {
                         draw_ui
                     fi
                     ;;
-                $'\x12') # Ctrl+R - Cycle through repeat modes
-                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+                $'\x12') # Ctrl+R - Toggle repeat mode
+                    REPEAT_MODE=$(( (REPEAT_MODE + 1) % 2 ))
                     draw_ui
                     ;;
                 $'\x13') # Ctrl+S - Cycle through symmetry modes

@@ -114,12 +114,11 @@ handle_main_input() {
             state_reset_selection
             draw_ui
             ;;
-        $'\x12') # Ctrl+R - Cycle repeat modes
-            REPEAT_MODE=$(( (REPEAT_MODE + 1) % 3 ))
+        $'\x12') # Ctrl+R - Toggle repeat modes
+            REPEAT_MODE=$(( (REPEAT_MODE + 1) % 2 ))
             case $REPEAT_MODE in
                 0) state_show_success "Continuous mode - Pattern flows through text" ;;
                 1) state_show_success "Per word mode - Pattern resets each word" ;;
-                2) state_show_success "Per phrase mode - Single pattern instance" ;;
             esac
             draw_ui
             ;;
