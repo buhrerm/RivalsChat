@@ -86,7 +86,7 @@ handle_main_input() {
                             draw_ui
                         fi
                         ;;
-                    "1") # Special keys (Ctrl+Arrow, Ctrl+Shift+Arrow, Shift+Arrow)
+                    "1") # Special keys (Ctrl+Arrow, Ctrl+Shift+Arrow, Shift+Arrow, Ctrl+Shift+C)
                         IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
                         if [[ "$char4" == ";" ]]; then
                             IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
