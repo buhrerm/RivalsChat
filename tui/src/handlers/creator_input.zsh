@@ -18,13 +18,10 @@ handle_creator_input() {
                     fi
                     ;;
                 $'\x1b') # Escape sequences for arrow keys or ESC
-                    IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
-                    if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to pattern manager
-                        state_handle_escape "pattern_creator"
-                        draw_ui
-                    elif [[ "$char2" == "[" ]]; then
-                        IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
+                    local char2 char3
+                    IFS= read -r -s -t 0.01 -k 1 char2 2>/dev/null
+                    if [[ -n "$char2" && "$char2" == "[" ]]; then
+                        IFS= read -r -s -t 0.01 -k 1 char3 2>/dev/null
                         case "$char3" in
                             "B") # Down arrow - move to icon selection
                                 if [[ -n "$CREATOR_NAME" ]]; then
@@ -33,6 +30,10 @@ handle_creator_input() {
                                 fi
                                 ;;
                         esac
+                    else
+                        # Just ESC - cancel and return to pattern manager
+                        state_handle_escape "pattern_creator"
+                        draw_ui
                     fi
                     ;;
                 $'\x12') # Ctrl+R - Toggle repeat mode
@@ -61,13 +62,10 @@ handle_creator_input() {
                     fi
                     ;;
                 $'\x1b') # Escape sequences for arrow keys or ESC
-                    IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
-                    if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to pattern manager
-                        state_handle_escape "pattern_creator"
-                        draw_ui
-                    elif [[ "$char2" == "[" ]]; then
-                        IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
+                    local char2 char3
+                    IFS= read -r -s -t 0.01 -k 1 char2 2>/dev/null
+                    if [[ -n "$char2" && "$char2" == "[" ]]; then
+                        IFS= read -r -s -t 0.01 -k 1 char3 2>/dev/null
                         case "$char3" in
                             "C") # Right arrow
                                 local icons_count=12
@@ -90,6 +88,10 @@ handle_creator_input() {
                                 fi
                                 ;;
                         esac
+                    else
+                        # Just ESC - cancel and return to pattern manager
+                        state_handle_escape "pattern_creator"
+                        draw_ui
                     fi
                     ;;
                 ' ') # Space - select icon
@@ -111,13 +113,10 @@ handle_creator_input() {
         "colors")
             case "$char" in
                 $'\x1b') # Escape or arrow keys
-                    IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
-                    if [[ -z "$char2" ]]; then
-                        # Just ESC - cancel and return to pattern manager
-                        state_handle_escape "pattern_creator"
-                        draw_ui
-                    elif [[ "$char2" == "[" ]]; then
-                        IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
+                    local char2 char3
+                    IFS= read -r -s -t 0.01 -k 1 char2 2>/dev/null
+                    if [[ -n "$char2" && "$char2" == "[" ]]; then
+                        IFS= read -r -s -t 0.01 -k 1 char3 2>/dev/null
                         case "$char3" in
                             "C") # Right arrow
                                 CREATOR_COLOR_CURSOR=$(( (CREATOR_COLOR_CURSOR % 13) + 1 ))
@@ -150,6 +149,10 @@ handle_creator_input() {
                                 draw_ui
                                 ;;
                         esac
+                    else
+                        # Just ESC - cancel and return to pattern manager
+                        state_handle_escape "pattern_creator"
+                        draw_ui
                     fi
                     ;;
                 ' ') # Space - add color (allows duplicates)

@@ -1,16 +1,13 @@
 handle_manager_input() {
-    char=$1
+    local char=$1
     local total_patterns=${#PATTERN_ORDER[@]}
 
     case "$char" in
         $'\x1b') # Escape or arrow keys
-            IFS= read -r -s -t 0.1 -k 1 char2 2>/dev/null
-            if [[ -z "$char2" ]]; then
-                # Just escape - return to main
-                state_handle_escape "pattern_manager"
-                draw_ui
-            elif [[ "$char2" == "[" ]]; then
-                IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
+            local char2 char3
+            IFS= read -r -s -t 0.01 -k 1 char2 2>/dev/null
+            if [[ -n "$char2" && "$char2" == "[" ]]; then
+                IFS= read -r -s -t 0.01 -k 1 char3 2>/dev/null
                 case "$char3" in
                     "A") # Up arrow
                         if [[ $MANAGER_CURSOR -gt 1 ]]; then
@@ -25,6 +22,10 @@ handle_manager_input() {
                         fi
                         ;;
                 esac
+            else
+                # Just escape - return to main
+                state_handle_escape "pattern_manager"
+                draw_ui
             fi
             ;;
         'n'|'N') # New pattern
