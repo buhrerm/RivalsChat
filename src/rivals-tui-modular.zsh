@@ -72,15 +72,92 @@ handle_main_input() {
             elif [[ "$char2" == "[" ]]; then
                 IFS= read -r -s -t 0.1 -k 1 char3 2>/dev/null
                 case "$char3" in
-                    "C") # Right arrow - next pattern
-                        local total=${#PATTERN_ORDER[@]}
-                        CURRENT_PATTERN_INDEX=$(( (CURRENT_PATTERN_INDEX % total) + 1 ))
-                        draw_ui
+                    "C") # Right arrow - move cursor right
+                        if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
+                            ((CURSOR_POS++))
+                            state_reset_selection
+                            draw_ui
+                        fi
                         ;;
-                    "D") # Left arrow - previous pattern
-                        local total=${#PATTERN_ORDER[@]}
-                        CURRENT_PATTERN_INDEX=$(( ((CURRENT_PATTERN_INDEX - 2 + total) % total) + 1 ))
-                        draw_ui
+                    "D") # Left arrow - move cursor left
+                        if [[ $CURSOR_POS -gt 0 ]]; then
+                            ((CURSOR_POS--))
+                            state_reset_selection
+                            draw_ui
+                        fi
+                        ;;
+                    "1") # Special keys (Ctrl+Arrow, Ctrl+Shift+Arrow, Shift+Arrow)
+                        IFS= read -r -s -t 0.1 -k 1 char4 2>/dev/null
+                        if [[ "$char4" == ";" ]]; then
+                            IFS= read -r -s -t 0.1 -k 1 char5 2>/dev/null
+                            case "$char5" in
+                                "2") # Shift+Arrow
+                                    IFS= read -r -s -t 0.1 -k 1 char6 2>/dev/null
+                                    case "$char6" in
+                                        "C") # Shift+Right - select right
+                                            if [[ $SELECTION_START -lt 0 ]]; then
+                                                SELECTION_START=$CURSOR_POS
+                                            fi
+                                            if [[ $CURSOR_POS -lt ${#INPUT_TEXT} ]]; then
+                                                ((CURSOR_POS++))
+                                                SELECTION_END=$CURSOR_POS
+                                                draw_ui
+                                            fi
+                                            ;;
+                                        "D") # Shift+Left - select left
+                                            if [[ $SELECTION_START -lt 0 ]]; then
+                                                SELECTION_START=$CURSOR_POS
+                                            fi
+                                            if [[ $CURSOR_POS -gt 0 ]]; then
+                                                ((CURSOR_POS--))
+                                                SELECTION_END=$CURSOR_POS
+                                                draw_ui
+                                            fi
+                                            ;;
+                                    esac
+                                    ;;
+                                "5") # Ctrl+Arrow
+                                    IFS= read -r -s -t 0.1 -k 1 char6 2>/dev/null
+                                    case "$char6" in
+                                        "C") # Ctrl+Right - move cursor to next word
+                                            local new_pos=$(state_find_word_end "$CURSOR_POS" "$INPUT_TEXT")
+                                            CURSOR_POS=$new_pos
+                                            state_reset_selection
+                                            draw_ui
+                                            ;;
+                                        "D") # Ctrl+Left - move cursor to previous word
+                                            local new_pos=$(state_find_word_start "$CURSOR_POS" "$INPUT_TEXT")
+                                            CURSOR_POS=$new_pos
+                                            state_reset_selection
+                                            draw_ui
+                                            ;;
+                                    esac
+                                    ;;
+                                "6") # Ctrl+Shift+Arrow
+                                    IFS= read -r -s -t 0.1 -k 1 char6 2>/dev/null
+                                    case "$char6" in
+                                        "C") # Ctrl+Shift+Right - select to end of next word
+                                            if [[ $SELECTION_START -lt 0 ]]; then
+                                                SELECTION_START=$CURSOR_POS
+                                            fi
+                                            local new_pos=$(state_find_word_end "$CURSOR_POS" "$INPUT_TEXT")
+                                            CURSOR_POS=$new_pos
+                                            SELECTION_END=$new_pos
+                                            draw_ui
+                                            ;;
+                                        "D") # Ctrl+Shift+Left - select to start of previous word
+                                            if [[ $SELECTION_START -lt 0 ]]; then
+                                                SELECTION_START=$CURSOR_POS
+                                            fi
+                                            local new_pos=$(state_find_word_start "$CURSOR_POS" "$INPUT_TEXT")
+                                            CURSOR_POS=$new_pos
+                                            SELECTION_END=$new_pos
+                                            draw_ui
+                                            ;;
+                                    esac
+                                    ;;
+                            esac
+                        fi
                         ;;
                 esac
             fi
@@ -102,17 +179,77 @@ handle_main_input() {
             fi
             ;;
         $'\x7f'|$'\b') # Backspace
-            if [[ $CURSOR_POS -gt 0 ]]; then
+            if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                # Delete selection
+                local sel_start=$SELECTION_START
+                local sel_end=$SELECTION_END
+                if [[ $sel_start -gt $sel_end ]]; then
+                    local tmp=$sel_start
+                    sel_start=$sel_end
+                    sel_end=$tmp
+                fi
+                INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                CURSOR_POS=$sel_start
+                state_reset_selection
+                draw_ui
+            elif [[ $CURSOR_POS -gt 0 ]]; then
                 INPUT_TEXT="${INPUT_TEXT:0:$(($CURSOR_POS - 1))}${INPUT_TEXT:$CURSOR_POS}"
                 ((CURSOR_POS--))
                 draw_ui
             fi
             ;;
-        $'\x15') # Ctrl+U - clear
-            INPUT_TEXT=""
-            CURSOR_POS=0
-            state_reset_selection
-            draw_ui
+        $'\x01') # Ctrl+A - Select all
+            if [[ ${#INPUT_TEXT} -gt 0 ]]; then
+                SELECTION_START=0
+                SELECTION_END=${#INPUT_TEXT}
+                CURSOR_POS=${#INPUT_TEXT}
+                draw_ui
+            fi
+            ;;
+        $'\x03') # Ctrl+C - Exit
+            return 1
+            ;;
+        $'\x16') # Ctrl+V - Paste
+            local pasted=$(clipboard_paste)
+            if [[ -n "$pasted" ]]; then
+                # Delete selection if exists
+                if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                    local sel_start=$SELECTION_START
+                    local sel_end=$SELECTION_END
+                    if [[ $sel_start -gt $sel_end ]]; then
+                        local tmp=$sel_start
+                        sel_start=$sel_end
+                        sel_end=$tmp
+                    fi
+                    INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                    CURSOR_POS=$sel_start
+                    state_reset_selection
+                fi
+                # Insert pasted text at cursor
+                INPUT_TEXT="${INPUT_TEXT:0:$CURSOR_POS}${pasted}${INPUT_TEXT:$CURSOR_POS}"
+                CURSOR_POS=$((CURSOR_POS + ${#pasted}))
+                draw_ui
+            fi
+            ;;
+        $'\x18') # Ctrl+X - Cut
+            if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                local sel_start=$SELECTION_START
+                local sel_end=$SELECTION_END
+                if [[ $sel_start -gt $sel_end ]]; then
+                    local tmp=$sel_start
+                    sel_start=$sel_end
+                    sel_end=$tmp
+                fi
+                local selected_text="${INPUT_TEXT:$sel_start:$((sel_end - sel_start))}"
+                echo -n "$selected_text" | eval "$CLIPBOARD_CMD" >/dev/null 2>&1
+                if [[ $? -eq 0 ]]; then
+                    INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                    CURSOR_POS=$sel_start
+                    state_reset_selection
+                    state_show_success "Cut selection to clipboard!"
+                    draw_ui
+                fi
+            fi
             ;;
         $'\x12') # Ctrl+R - Toggle repeat modes
             REPEAT_MODE=$(( (REPEAT_MODE + 1) % 2 ))
@@ -132,6 +269,20 @@ handle_main_input() {
             draw_ui
             ;;
         *) # Regular character
+            # Delete selection if exists
+            if [[ $SELECTION_START -ge 0 && $SELECTION_END -ge 0 ]]; then
+                local sel_start=$SELECTION_START
+                local sel_end=$SELECTION_END
+                if [[ $sel_start -gt $sel_end ]]; then
+                    local tmp=$sel_start
+                    sel_start=$sel_end
+                    sel_end=$tmp
+                fi
+                INPUT_TEXT="${INPUT_TEXT:0:$sel_start}${INPUT_TEXT:$sel_end}"
+                CURSOR_POS=$sel_start
+                state_reset_selection
+            fi
+
             if [[ ${#INPUT_TEXT} -lt $INPUT_MAX_LENGTH ]]; then
                 INPUT_TEXT="${INPUT_TEXT:0:$CURSOR_POS}${char}${INPUT_TEXT:$CURSOR_POS}"
                 ((CURSOR_POS++))

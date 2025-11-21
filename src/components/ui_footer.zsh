@@ -11,7 +11,11 @@ draw_footer() {
     draw_spacer
 
     if [[ $SHOW_SUCCESS -eq 1 ]]; then
-        echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..23})${UI_COLORS[SUCCESS]}${UI_COLORS[BOLD]}✓ ${SUCCESS_MSG}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$((68 - 23 - ${#SUCCESS_MSG} - 2))})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
+        local msg_text="✓ ${SUCCESS_MSG}"
+        local msg_len=$(get_visible_length "$msg_text")
+        local left_pad=23
+        local right_pad=$((68 - left_pad - msg_len))
+        echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$left_pad})${UI_COLORS[SUCCESS]}${UI_COLORS[BOLD]}${msg_text}${UI_COLORS[RESET]}$(printf ' %.0s' {1..$right_pad})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
     else
         echo -e "${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}$(printf ' %.0s' {1..68})${UI_COLORS[BORDER]}${BOX[V]}${UI_COLORS[RESET]}"
     fi
