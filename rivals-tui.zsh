@@ -1,8 +1,11 @@
 #!/usr/bin/env zsh
 
-# Marvel Rivals Rainbow Converter - Enhanced TUI with Custom Pattern Creator
+# Rivals Rainbow TUI - Marvel Rivals Rainbow Text Converter
+# Version: 1.0.0
 # Type text, use arrow keys or Tab to switch patterns, Enter to copy, Esc to quit
 # Press Ctrl+P to enter Pattern Manager mode
+
+VERSION="1.0.0"
 
 # Marvel Rivals Color Codes (matching the game)
 typeset -A RIVALS=(
@@ -1595,8 +1598,43 @@ cleanup() {
         tput cnorm 2>/dev/null
         tput rmcup 2>/dev/null
         stty echo ixon 2>/dev/null  # Re-enable echo and flow control
-        echo -e "\n${ACCENT}${BOLD}Thanks for using Enhanced Rivals Rainbow Converter!${RESET}\n"
+        echo -e "\n${ACCENT}${BOLD}Thanks for using Rivals Rainbow TUI v${VERSION}!${RESET}\n"
     } 2>/dev/null
+    exit 0
+}
+
+# Show version
+show_version() {
+    echo "Rivals Rainbow TUI v${VERSION}"
+    echo "Marvel Rivals Rainbow Text Converter"
+    exit 0
+}
+
+# Show help
+show_help() {
+    cat << EOF
+Rivals Rainbow TUI v${VERSION}
+Marvel Rivals Rainbow Text Converter
+
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  -h, --help     Show this help message
+  -v, --version  Show version information
+
+Interactive Controls:
+  Type           Enter your text
+  Tab/←/→        Navigate patterns
+  Enter          Copy to clipboard
+  Ctrl+P         Pattern Manager
+  Ctrl+R         Cycle repeat modes
+  Ctrl+S         Cycle symmetry modes
+  Esc            Quit
+
+For more information, visit:
+  https://github.com/yourusername/rivals-rainbow-tui
+
+EOF
     exit 0
 }
 
@@ -1893,6 +1931,29 @@ main() {
         } 2>/dev/null  # Suppress any potential debug output
     done
 }
+
+# Parse command line arguments
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                ;;
+            -v|--version)
+                show_version
+                ;;
+            *)
+                echo "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+# Parse arguments if any
+parse_args "$@"
 
 # Run the application
 main
