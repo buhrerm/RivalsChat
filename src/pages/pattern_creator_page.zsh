@@ -130,12 +130,12 @@ draw_pattern_creator() {
 
         # Temporarily set pattern for preview
         local temp_pattern="${CREATOR_COLORS[*]}"
-        ALL_PATTERNS["_preview_temp_"]="$temp_pattern"
+        ALL_PATTERNS[_preview_temp_]=$temp_pattern
 
         local preview=$(generate_rainbow "$test_text" "_preview_temp_")
 
         # Clean up temp pattern
-        unset ALL_PATTERNS["_preview_temp_"]
+        unset "ALL_PATTERNS[_preview_temp_]"
 
         echo -e "${BORDER}${V}${RESET}  ${preview}$(printf ' %.0s' {1..$((66 - ${#test_text}))})${BORDER}${V}${RESET}"
     else
