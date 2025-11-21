@@ -1,18 +1,19 @@
-import { PATTERNS, PATTERN_NAMES } from '../lib/patterns'
 import { COLORS } from '../lib/colors'
 import styles from './PatternSelector.module.css'
 
 type Props = {
+  patterns: Record<string, string[]>
+  patternNames: string[]
   selected: string
   onSelect: (name: string) => void
 }
 
-export function PatternSelector({ selected, onSelect }: Props) {
+export function PatternSelector({ patterns, patternNames, selected, onSelect }: Props) {
   return (
     <div className={styles.container}>
       <label className={styles.label}>Pattern</label>
       <div className={styles.grid}>
-        {PATTERN_NAMES.map((name) => (
+        {patternNames.map((name) => (
           <button
             key={name}
             className={`${styles.button} ${selected === name ? styles.selected : ''}`}
@@ -20,7 +21,7 @@ export function PatternSelector({ selected, onSelect }: Props) {
           >
             <span className={styles.name}>{name}</span>
             <div className={styles.swatches}>
-              {PATTERNS[name]!.slice(0, 6).map((code, i) => (
+              {(patterns[name] ?? []).slice(0, 6).map((code, i) => (
                 <span
                   key={i}
                   className={styles.swatch}
