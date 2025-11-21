@@ -20,7 +20,7 @@ typeset -g SELECTION_END=-1
 
 # Pattern State
 typeset -g CURRENT_PATTERN_INDEX=1
-typeset -g REPEAT_MODE=0  # 0=continuous, 1=per word, 2=per phrase
+typeset -g REPEAT_MODE=1  # 0=continuous, 1=per word, 2=per phrase
 typeset -g SYMMETRY_MODE=0  # 0=off, 1=mirror, 2=full
 
 # Pattern Storage

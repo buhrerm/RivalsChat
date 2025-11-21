@@ -106,8 +106,8 @@ generate_rainbow() {
                         # Apply full pattern to word
                         for ((j=1; j<=$word_len; j++)); do
                             local wchar="${word:$((j-1)):1}"
-                            local color="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
-                            result+="#${color}${wchar}"
+                            local color_code="${full_pattern[$(( ((j - 1) % ${#full_pattern[@]}) + 1 ))]}"
+                            result+="${COLORS[$color_code]}${wchar}${RESET}"
                         done
                     elif [[ $SYMMETRY_MODE -eq 1 ]]; then
                         # Word with symmetry
