@@ -147,25 +147,19 @@ draw_pattern_creator() {
 
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
 
-    # Controls
-    echo -ne "${BORDER}${VR}"
-    printf "${H}%.0s" {1..$((70-2))}
-    echo -e "${VL}${RESET}"
-
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # Controls - use centralized controls based on mode
+    draw_divider
+    draw_spacer
 
     if [[ "$CREATOR_MODE" == "name" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}Type pattern name, ${TEXT}Tab${RESET}${DIM} or ${TEXT}↓${RESET}${DIM} to continue, ${TEXT}Esc${RESET}${DIM} to cancel${RESET}$(printf ' %.0s' {1..14})${BORDER}${V}${RESET}"
+        draw_controls "pattern_creator_name"
     elif [[ "$CREATOR_MODE" == "icon" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}←/→${RESET}${DIM} select, ${TEXT}Space${RESET}${DIM} choose, ${TEXT}Tab/↓${RESET}${DIM} continue, ${TEXT}↑${RESET}${DIM} back${RESET}$(printf ' %.0s' {1..15})${BORDER}${V}${RESET}"
+        draw_controls "pattern_creator_icon"
     elif [[ "$CREATOR_MODE" == "colors" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}Arrows move, ${TEXT}Space${RESET}${DIM} add, ${TEXT}Backspace${RESET}${DIM} del, ${TEXT}S${RESET}${DIM} save${RESET}$(printf ' %.0s' {1..13})${BORDER}${V}${RESET}"
+        draw_controls "pattern_creator_colors"
     fi
 
-    # Show controls for repeat/symmetry modes in all creator modes
-    echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}Ctrl+R${RESET}${DIM} Repeat mode, ${TEXT}Ctrl+S${RESET}${DIM} Symmetry toggle${RESET}$(printf ' %.0s' {1..20})${BORDER}${V}${RESET}"
-
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    draw_spacer
 
     echo -ne "${BORDER}${BL}"
     printf "${H}%.0s" {1..$((70-2))}

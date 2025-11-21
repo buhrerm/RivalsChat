@@ -1,3 +1,6 @@
+# Source common UI functions
+source "${0:A:h}/../components/ui_common.zsh"
+
 # Draw pattern manager interface
 draw_pattern_manager() {
     echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
@@ -74,23 +77,13 @@ draw_pattern_manager() {
         echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
     done
 
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    draw_spacer
 
-    # Action buttons
-    echo -ne "${BORDER}${VR}"
-    printf "${H}%.0s" {1..$((70-2))}
-    echo -e "${VL}${RESET}"
-
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
-
-    local current_pattern="${PATTERN_ORDER[$MANAGER_CURSOR]}"
-    if [[ -z "${BUILTIN_PATTERNS[$current_pattern]}" ]]; then
-        echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}E${RESET}${DIM} Edit  ${TEXT}D${RESET}${DIM} Delete  ${TEXT}N${RESET}${DIM} New  ${TEXT}Enter${RESET}${DIM} Select  ${TEXT}Esc${RESET}${DIM} Back${RESET}$(printf ' %.0s' {1..16})${BORDER}${V}${RESET}"
-    else
-        echo -e "${BORDER}${V}${RESET}  ${DIM}${TEXT}N${RESET}${DIM} New  ${TEXT}Enter${RESET}${DIM} Select  ${TEXT}Esc${RESET}${DIM} Back${RESET}$(printf ' %.0s' {1..33})${BORDER}${V}${RESET}"
-    fi
-
-    echo -e "${BORDER}${V}${RESET}$(printf ' %.0s' {1..68})${BORDER}${V}${RESET}"
+    # Action buttons - use centralized controls
+    draw_divider
+    draw_spacer
+    draw_controls "pattern_manager"
+    draw_spacer
 
     echo -ne "${BORDER}${BL}"
     printf "${H}%.0s" {1..$((70-2))}
