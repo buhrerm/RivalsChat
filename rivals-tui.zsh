@@ -1,0 +1,1 @@
+src/rivals-tui-modular.zsh

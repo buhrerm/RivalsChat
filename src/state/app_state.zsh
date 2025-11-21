@@ -95,3 +95,76 @@ state_handle_escape() {
             ;;
     esac
 }
+
+# Find the start of the current/previous word
+state_find_word_start() {
+    local pos=$1
+    local text=$2
+
+    # If at start, return 0
+    if [[ $pos -le 0 ]]; then
+        echo 0
+        return
+    fi
+
+    # Move back one if at end of word
+    if [[ $pos -gt 0 ]]; then
+        local prev_char="${text:$((pos-1)):1}"
+        if [[ "$prev_char" =~ [[:space:]] ]]; then
+            ((pos--))
+        fi
+    fi
+
+    # Skip any whitespace
+    while [[ $pos -gt 0 ]]; do
+        local char="${text:$((pos-1)):1}"
+        if [[ ! "$char" =~ [[:space:]] ]]; then
+            break
+        fi
+        ((pos--))
+    done
+
+    # Find start of word
+    while [[ $pos -gt 0 ]]; do
+        local char="${text:$((pos-1)):1}"
+        if [[ "$char" =~ [[:space:]] ]]; then
+            break
+        fi
+        ((pos--))
+    done
+
+    echo $pos
+}
+
+# Find the end of the current/next word
+state_find_word_end() {
+    local pos=$1
+    local text=$2
+    local len=${#text}
+
+    # If at end, return length
+    if [[ $pos -ge $len ]]; then
+        echo $len
+        return
+    fi
+
+    # Skip current word if in middle of one
+    while [[ $pos -lt $len ]]; do
+        local char="${text:$pos:1}"
+        if [[ "$char" =~ [[:space:]] ]]; then
+            break
+        fi
+        ((pos++))
+    done
+
+    # Skip whitespace
+    while [[ $pos -lt $len ]]; do
+        local char="${text:$pos:1}"
+        if [[ ! "$char" =~ [[:space:]] ]]; then
+            break
+        fi
+        ((pos++))
+    done
+
+    echo $pos
+}
