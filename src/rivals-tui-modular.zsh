@@ -23,6 +23,10 @@ source "${SCRIPT_DIR}/pages/main_page.zsh"
 source "${SCRIPT_DIR}/pages/pattern_creator_page.zsh"
 source "${SCRIPT_DIR}/pages/pattern_manager_page.zsh"
 
+# Source input handlers
+source "${SCRIPT_DIR}/handlers/creator_input.zsh"
+source "${SCRIPT_DIR}/handlers/manager_input.zsh"
+
 # Draw complete UI based on current mode
 draw_ui() {
     # Check if success message should be cleared
@@ -231,10 +235,10 @@ main() {
                     fi
                     ;;
                 "pattern_creator")
-                    # TODO: Implement pattern creator input handling
+                    handle_creator_input "$char"
                     ;;
                 "pattern_manager")
-                    # TODO: Implement pattern manager input handling
+                    handle_manager_input "$char"
                     ;;
             esac
         } 2>/dev/null

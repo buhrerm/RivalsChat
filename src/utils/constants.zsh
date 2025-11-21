@@ -94,3 +94,28 @@ typeset -ga AVAILABLE_ICONS=(
     "🎨" "🌟" "💎" "🔥" "❄️" "⚡"
     "🌈" "🌸" "🍀" "🎭" "🎪" "🎯"
 )
+
+# Compatibility aliases for extracted pages (original used simple variables)
+typeset -g RESET="${UI_COLORS[RESET]}"
+typeset -g BOLD="${UI_COLORS[BOLD]}"
+typeset -g DIM="${UI_COLORS[DIM]}"
+typeset -g ACCENT="${UI_COLORS[ACCENT]}"
+typeset -g SUCCESS="${UI_COLORS[SUCCESS]}"
+typeset -g BORDER="${UI_COLORS[BORDER]}"
+typeset -g TEXT="${UI_COLORS[TEXT]}"
+typeset -g HIGHLIGHT="${UI_COLORS[HIGHLIGHT]}"
+typeset -g ERROR="${UI_COLORS[ERROR]}"
+typeset -g SELECTED="${UI_COLORS[SELECTED]}"
+
+# Box drawing character aliases
+typeset -g TL="${BOX[TL]}"
+typeset -g TR="${BOX[TR]}"
+typeset -g BL="${BOX[BL]}"
+typeset -g BR="${BOX[BR]}"
+typeset -g H="${BOX[H]}"
+typeset -g V="${BOX[V]}"
+typeset -g VR="${BOX[VR]}"
+typeset -g VL="${BOX[VL]}"
+typeset -g HU="${BOX[HU]}"
+typeset -g HD="${BOX[HD]}"
+typeset -g CROSS="${BOX[CROSS]}"

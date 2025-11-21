@@ -21,6 +21,29 @@ A beautiful terminal-based rainbow text converter for Marvel Rivals. Create vibr
   - `xsel` (Linux alternative)
 - `jq` (optional, for custom pattern storage)
 
+## Directory Structure
+
+```
+Rivals/
+├── src/                    # Modular source code
+│   ├── components/         # UI components (header, input, preview, etc)
+│   ├── handlers/           # Input handlers for different modes
+│   ├── lib/                # Business logic (converter, renderer)
+│   ├── pages/              # Page views (main, creator, manager)
+│   ├── state/              # State management
+│   ├── utils/              # Utilities (config, clipboard, constants)
+│   └── rivals-tui-modular.zsh  # Modular entry point
+├── tests/                  # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── component_test.zsh  # Component smoke tests
+├── rivals-tui.zsh          # Modular version (default)
+├── rivals-tui-original.zsh # Original monolithic version
+├── CLAUDE.md               # Architecture documentation
+├── README.md               # This file
+└── LICENSE                 # MIT License
+```
+
 ## Installation
 
 ### Quick Install
@@ -34,7 +57,8 @@ cd rivals-rainbow-tui
 ./install.sh
 
 # Or run directly without installing
-./rivals-tui.zsh
+./rivals-tui.zsh          # Modular version (default)
+./rivals-tui-original.zsh # Original monolithic version
 ```
 
 ### Manual Install
