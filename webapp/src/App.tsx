@@ -5,7 +5,6 @@ import { TextInput } from './components/TextInput'
 import { PatternSelector } from './components/PatternSelector'
 import { ModeToggle } from './components/ModeToggle'
 import { Preview } from './components/Preview'
-import { CopyButton } from './components/CopyButton'
 import { PatternManager } from './components/PatternManager'
 import { PatternEditor } from './components/PatternEditor'
 
@@ -36,6 +35,10 @@ export function App() {
     if (!p) return ''
     return convertText(text, p, repeatMode, symmetryMode)
   }, [text, pattern, repeatMode, symmetryMode, allPatterns])
+
+  const handleCopy = () => {
+    if (converted) navigator.clipboard.writeText(converted)
+  }
 
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode')
@@ -104,7 +107,7 @@ export function App() {
       </header>
       <main className="main">
         <div className="input-section">
-          <TextInput value={text} onChange={setText} />
+          <TextInput value={text} onChange={setText} onCopy={handleCopy} />
           <ModeToggle
             repeatMode={repeatMode}
             symmetryMode={symmetryMode}
@@ -120,7 +123,6 @@ export function App() {
         </div>
         <div className="output-section">
           <Preview converted={converted} />
-          <CopyButton text={converted} />
         </div>
       </main>
 

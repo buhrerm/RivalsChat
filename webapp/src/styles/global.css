@@ -56,6 +56,27 @@ body {
   color: var(--accent);
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.manage-btn {
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.manage-btn:hover {
+  border-color: var(--accent);
+}
+
 .theme-toggle {
   background: none;
   border: 2px solid var(--border);
@@ -72,21 +93,23 @@ body {
 }
 
 .main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .input-section,
 .output-section {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 @media (max-width: 768px) {
   .main {
-    grid-template-columns: 1fr;
+    max-width: 100%;
   }
 
   .header h1 {
